@@ -1,0 +1,17 @@
+[
+  {
+    "id": "session-1",
+    "label": "Session 1",
+    "entries": [
+      { "playerId": "dom", "buyIn": 400, "net": 910 },
+      { "playerId": "will", "buyIn": 800, "net": 880 },
+      { "playerId": "taam", "buyIn": 500, "net": 0 },
+      { "playerId": "fah", "buyIn": 400, "net": -190 },
+      { "playerId": "bank", "buyIn": 400, "net": -400 },
+      { "playerId": "tip", "buyIn": 400, "net": -400 },
+      { "playerId": "zack", "buyIn": 800, "net": -800 },
+      { "playerId": "chase", "buyIn": 0, "net": null },
+      { "playerId": "jj", "buyIn": 0, "net": null }
+    ]
+  }
+]
