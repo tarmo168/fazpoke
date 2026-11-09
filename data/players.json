@@ -1,0 +1,52 @@
+[
+  {
+    "id": "taam",
+    "name": "Taam",
+    "photo": "assets/players/taam.png"
+  },
+  {
+    "id": "bank",
+    "name": "Bank",
+    "photo": "assets/players/bank.png"
+  },
+  {
+    "id": "chase",
+    "name": "Chase",
+    "photo": "assets/players/chase.png"
+  },
+  {
+    "id": "fah",
+    "name": "Fah",
+    "photo": "assets/players/fah.png"
+  },
+  {
+    "id": "jj",
+    "name": "JJ",
+    "photo": "assets/players/jj.png"
+  },
+  {
+    "id": "dom",
+    "name": "Dom",
+    "photo": "assets/players/dom.png"
+  },
+  {
+    "id": "na",
+    "name": "Na",
+    "photo": "assets/players/na.png"
+  },
+  {
+    "id": "tip",
+    "name": "Tip",
+    "photo": "assets/players/tip.png"
+  },
+  {
+    "id": "will",
+    "name": "Will",
+    "photo": "assets/players/will.png"
+  },
+  {
+    "id": "zack",
+    "name": "Zack",
+    "photo": "assets/players/zack.png"
+  }
+]
