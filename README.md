@@ -67,7 +67,7 @@ Replace `buyIn` and `net` with the real figures before you commit. Leave anyone 
 Check the sheet before pushing:
 
 ```bash
-node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs
+node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs tests/share.test.mjs
 ```
 
 Recorded nets on a finished session should add up to `0`. The test locks Session 1 at buy-in `3,700` and net `0`.
@@ -82,9 +82,37 @@ The board ranks the table by live result: current stack minus buy-in tonight. Po
 
 Tap a player and enter the stack they have in front of them. **+ Re-buy** adds that amount to the buy-in and to the stack, so the result stays put until the next count. **Full screen** enlarges the type for a TV. The same page works in landscape on a phone. **Reset** clears the night after a confirm. A refresh keeps the night on this device.
 
-**End game** lists each buy-in and net, and checks that the nets sum to 0. **Copy results** writes one plain line per player, such as `Dom 400 +910`. **Download JSON** saves one session in the same shape as `data/sessions.json`, using the next session id. Paste that object into the ledger and fill in any figure that still needs correcting. **Back to board** returns to the stacks.
+**End game** lists each buy-in and net, and checks that the nets sum to 0. **Copy results** and **Share results to LINE** use the same plain text: a header such as `Fazwazpoker – Tuesday 10 Nov 2026`, then one line per player such as `Dom 400 +910`, then the site link. **Share…** is there when the browser offers the Web Share API. **Download JSON** saves one session in the same shape as `data/sessions.json`, using the next session id. Paste that object into the ledger and fill in any figure that still needs correcting. **Back to board** returns to the stacks.
 
 To save the night without editing the file, set `SHEET_API_URL` in `js/config.js`. The steps are in `SETUP-GOOGLE-SHEET.md`. Leave that URL empty and nothing about the sheet runs. When it is set, End game asks once for the host PIN, saves the session, and the board, charts, and ledger include it. Saving stays off while the nets do not sum to 0. Copy and download remain if the sheet does not save.
+
+## Share to LINE
+
+**Share to LINE** in the header opens LINE with this site. On a phone that opens the LINE app. On a desktop it opens LINE's web share page. **Share…** uses the browser share sheet when the device has one.
+
+**Who's in?** is in the header and on the live board while you are picking players. Choose a date, and optionally a time and a place. The date starts on today. An earlier date is refused. **Send to LINE** opens LINE with the note. **Copy** puts the same note on the clipboard.
+
+```
+♠ Fazwazpoker game night
+Tuesday 10 Nov 2026 8:30 pm
+The usual table
+Who's in? Reply with 🙋
+Live board: https://tarmo168.github.io/fazpoke/#/live
+```
+
+## Link preview
+
+`index.html` carries Open Graph and Twitter card tags so LINE and other chat apps can show a title, a short description, and a picture. The picture is the static file `assets/og-image.png` (1200×630). It does not include a chip leader, because a GitHub Pages meta tag cannot change with the ledger.
+
+Regenerate the picture from the fonts in this repo:
+
+```bash
+python3 -m pip install fonttools brotli
+npm install --no-save @resvg/resvg-js
+node scripts/og-image.mjs
+```
+
+The script draws an SVG and renders that to the PNG. It does not read `data/sessions.json`.
 
 ## Add a player
 

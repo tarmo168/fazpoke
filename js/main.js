@@ -5,6 +5,14 @@ import { colorMap, mountChart, seriesFromPlayer } from "./chart.js";
 import { mountLive, unmountLive, updateLiveSessions } from "./live.js";
 import { SHEET_API_URL } from "./config.js";
 import { loadSheetSessions, mergeSessions, onLedgerRefresh, sheetEnabled } from "./sheets.js";
+import { closeInvite, openInvite } from "./invite.js";
+import {
+  SITE_URL,
+  canWebShare,
+  leaderboardShareData,
+  lineItShareUrl,
+  shareNative,
+} from "./share.js";
 
 const state = {
   players: [],
@@ -636,7 +644,23 @@ onLedgerRefresh(async (saved) => {
 });
 
 state.route = parseRoute();
+function bindShare() {
+  const line = document.querySelector("[data-share-line]");
+  if (line) line.href = lineItShareUrl(SITE_URL);
+  const more = document.querySelector("[data-share-more]");
+  if (more && canWebShare()) {
+    more.hidden = false;
+    more.addEventListener("click", () => {
+      void shareNative(leaderboardShareData());
+    });
+  }
+  document.querySelector("[data-invite-open]")?.addEventListener("click", (event) => {
+    openInvite(event.currentTarget);
+  });
+}
+
 window.addEventListener("hashchange", () => {
+  closeInvite();
   const previous = state.route;
   state.route = parseRoute();
   render();
@@ -650,4 +674,5 @@ window.addEventListener("hashchange", () => {
   }
 });
 
+bindShare();
 load();

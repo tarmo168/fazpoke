@@ -4,7 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#101411">
-  <meta name="description" content="Fazwazpoker private ledger. Cumulative results for the group.">
+  <meta name="description" content="Leaderboard, charts and session ledger for our poker nights">
+  <meta property="og:title" content="Fazwazpoker">
+  <meta property="og:description" content="Leaderboard, charts and session ledger for our poker nights">
+  <meta property="og:url" content="https://tarmo168.github.io/fazpoke/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://tarmo168.github.io/fazpoke/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Fazwazpoker leaderboard">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Fazwazpoker">
+  <meta name="twitter:description" content="Leaderboard, charts and session ledger for our poker nights">
+  <meta name="twitter:image" content="https://tarmo168.github.io/fazpoke/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Fazwazpoker leaderboard">
   <title>Fazwazpoker</title>
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preload" href="assets/fonts/outfit.woff2" as="font" type="font/woff2" crossorigin>
@@ -25,12 +38,19 @@
           <span class="brand-kicker">Private ledger</span>
         </span>
       </a>
-      <nav class="tabs" aria-label="Sections">
-        <a href="#/board" data-nav="board">Board</a>
-        <a href="#/charts" data-nav="charts">Charts</a>
-        <a href="#/ledger" data-nav="ledger">Ledger</a>
-        <a href="#/live" data-nav="live">Live board</a>
-      </nav>
+      <div class="bar-end">
+        <div class="bar-actions">
+          <a class="line-share" data-share-line href="https://social-plugins.line.me/lineit/share?url=https%3A%2F%2Ftarmo168.github.io%2Ffazpoke%2F" target="_blank" rel="noopener noreferrer">Share to LINE</a>
+          <button type="button" class="bar-btn" data-share-more hidden>Share…</button>
+          <button type="button" class="bar-btn" data-invite-open>Who's in?</button>
+        </div>
+        <nav class="tabs" aria-label="Sections">
+          <a href="#/board" data-nav="board">Board</a>
+          <a href="#/charts" data-nav="charts">Charts</a>
+          <a href="#/ledger" data-nav="ledger">Ledger</a>
+          <a href="#/live" data-nav="live">Live board</a>
+        </nav>
+      </div>
     </div>
   </header>
   <main id="content" class="shell" tabindex="-1">

@@ -10,7 +10,6 @@ import {
   emptyNight,
   formatClock,
   formatNight,
-  formatResultsText,
   formatSessionJson,
   localDate,
   parseNight,
@@ -24,6 +23,14 @@ import {
   withDate,
 } from "./liveboard.js";
 import { SHEET_API_URL } from "./config.js";
+import { openInvite } from "./invite.js";
+import {
+  canWebShare,
+  formatResultsShareText,
+  lineTextShareUrl,
+  resultsShareData,
+  shareNative,
+} from "./share.js";
 import {
   buildSaveBody,
   buildSessionPayload,
@@ -110,6 +117,7 @@ function padInput() {
 }
 
 function onKeyDown(event) {
+  if (document.body.dataset.inviteOpen === "true") return;
   if (!view.pad || !document.body.classList.contains("route-live")) return;
   if (event.key === "Escape") {
     event.preventDefault();
@@ -529,9 +537,12 @@ async function toggleScreen() {
   paint();
 }
 
+function resultsPlainText() {
+  return formatResultsShareText(rankedField(view.night.players, view.roster), view.night.date);
+}
+
 async function onCopy() {
-  const rows = rankedField(view.night.players, view.roster);
-  const text = formatResultsText(rows);
+  const text = resultsPlainText();
   try {
     if (!navigator.clipboard?.writeText) throw new Error("unavailable");
     await navigator.clipboard.writeText(text);
@@ -543,6 +554,24 @@ async function onCopy() {
     view.focusCopy = true;
   }
   paint();
+}
+
+async function onShareResults() {
+  const result = await shareNative(resultsShareData(resultsPlainText()));
+  if (result === "failed") {
+    view.message = "Sharing is not available in this browser.";
+    paint();
+  }
+}
+
+function onInvite(event) {
+  let opener = event.currentTarget;
+  if (view.pad) {
+    view.pad = null;
+    paint();
+    opener = view.container?.querySelector("[data-invite-open]") || opener;
+  }
+  openInvite(opener);
 }
 
 function onDownload() {
@@ -723,6 +752,14 @@ function renderSetup() {
   if (view.night.players.length && waiting) note = "Enter a starting buy-in for each player.";
   return el("section", { class: "lb-setup" }, [
     el("p", { class: "note", text: note }),
+    el("div", { class: "lb-setup-tools" }, [
+      el("button", {
+        type: "button",
+        class: "lb-btn",
+        dataset: { inviteOpen: "true" },
+        onclick: onInvite,
+      }, "Who's in?"),
+    ]),
     el("ul", { class: "lb-roster" }, people.map((person) => {
       const pick = pickOf(person.id);
       const on = !!pick;
@@ -822,6 +859,7 @@ function renderBoard() {
 function renderFinal() {
   const ranked = rankedField(view.night.players, view.roster);
   const balance = balanceNote(view.night.players);
+  const text = formatResultsShareText(ranked, view.night.date);
   return el("section", { class: "lb-final" }, [
     el("h2", { text: "Final results" }),
     el("p", {
@@ -851,13 +889,24 @@ function renderFinal() {
         class: sheetEnabled() ? "lb-btn" : "lb-btn lb-btn-primary",
         onclick: () => { onCopy(); },
       }, "Copy results"),
+      el("a", {
+        class: "line-share",
+        href: lineTextShareUrl(text),
+        target: "_blank",
+        rel: "noopener noreferrer",
+      }, "Share results to LINE"),
+      canWebShare() ? el("button", {
+        type: "button",
+        class: "lb-btn",
+        onclick: () => { void onShareResults(); },
+      }, "Share…") : null,
       el("button", { type: "button", class: "lb-btn", onclick: onDownload }, "Download JSON"),
     ]),
     el("p", {
       class: "note",
       text: sheetEnabled()
-        ? "Each line is the name, the buy-in, and the net. Copy and download stay available if the sheet does not save."
-        : "Each line is the name, the buy-in, and the net. The file is one session to paste into data/sessions.json.",
+        ? "Copy and Share results to LINE use the same text: the date, one line per player, and the site link. Copy and download stay available if the sheet does not save."
+        : "Copy and Share results to LINE use the same text: the date, one line per player, and the site link. Download JSON is one session to paste into data/sessions.json.",
     }),
     view.copyText
       ? el("textarea", {
