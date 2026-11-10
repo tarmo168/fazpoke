@@ -389,13 +389,13 @@ function render() {
     return;
   }
   if (!state.ready) {
-    main.replaceChildren(el("p", { class: "note", text: live ? "Loading the table…" : "Loading ledger…" }));
+    main.replaceChildren(el("p", { class: "note", text: live ? "Loading the leaderboard…" : "Loading ledger…" }));
     return;
   }
 
   if (live) {
-    document.title = "Live table · Fazwazpoker";
-    mountLive(main, state.players);
+    document.title = "Live leaderboard · Fazwazpoker";
+    mountLive(main, state.players, state.sessions);
     return;
   }
 

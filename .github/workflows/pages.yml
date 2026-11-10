@@ -30,7 +30,7 @@ jobs:
           for file in js/*.js; do
             node --check "$file"
           done
-          node --test tests/ledger.test.mjs tests/handstats.test.mjs tests/handstore.test.mjs
+          node --test tests/ledger.test.mjs tests/liveboard.test.mjs
 
   deploy:
     needs: test
