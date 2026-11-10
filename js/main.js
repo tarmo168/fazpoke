@@ -131,9 +131,8 @@ function board(model) {
   });
 
   return el("section", { class: "panel", id: "board" }, [
-    el("p", { class: "section-kicker", text: "Leaderboard" }),
     el("div", { class: "section-head" }, [
-      el("h1", { text: "The board" }),
+      el("h1", { text: "Leaderboard" }),
       el("div", { class: "sort", role: "group", "aria-label": "Sort the leaderboard" }, SORTS.map((item) => {
         const on = state.sortKey === item.key;
         const arrow = on ? (state.sortDir === "desc" ? "↓" : "↑") : "";
