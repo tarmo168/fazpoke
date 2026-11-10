@@ -23,6 +23,16 @@ import {
   totalInPlay,
   withDate,
 } from "./liveboard.js";
+import { SHEET_API_URL } from "./config.js";
+import {
+  buildSaveBody,
+  buildSessionPayload,
+  maxSessionNumber,
+  mergeSessions,
+  postSession,
+  requestLedgerRefresh,
+  sheetEnabled,
+} from "./sheets.js";
 
 const OLD_KEYS = [
   "fazpoke.live.seating",
@@ -30,6 +40,9 @@ const OLD_KEYS = [
   "fazpoke.live.draft",
   "fazpoke.live.probe",
 ];
+
+const PIN_KEY = "fazpoke.hostPin";
+const SAVE_KEY = "fazpoke.liveboard.saveKey";
 
 const PAD_COPY = {
   stack: { kicker: "Current stack", done: "Set stack" },
@@ -50,11 +63,16 @@ const view = {
   copyText: "",
   focusCopy: false,
   focus: "",
+  focusPin: false,
   paintedPhase: "",
   nativeFullscreen: false,
+  saveStatus: "",
+  sheetMessage: "",
+  pinDraft: "",
 };
 
 let listening = false;
+let saving = false;
 
 function personOf(playerId) {
   return view.roster.find((player) => player.id === playerId) || {
@@ -158,6 +176,52 @@ function persist() {
   } catch {
     view.saveError = "This browser could not keep tonight's game.";
   }
+}
+
+function readStorage(key) {
+  try {
+    return localStorage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+}
+
+function writeStorage(key, value) {
+  try {
+    if (value) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  } catch {
+    /* The next attempt can ask again. */
+  }
+}
+
+function readPin() {
+  return readStorage(PIN_KEY);
+}
+
+function rememberPin(pin) {
+  writeStorage(PIN_KEY, pin);
+}
+
+function forgetPin() {
+  writeStorage(PIN_KEY, "");
+  view.pinDraft = "";
+}
+
+function ensureSaveKey() {
+  const existing = readStorage(SAVE_KEY);
+  if (existing) return existing;
+  const key = globalThis.crypto?.randomUUID?.()
+    || `save-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  writeStorage(SAVE_KEY, key);
+  return key;
+}
+
+function clearSavedNote() {
+  if (view.saveStatus !== "saved") return;
+  view.saveStatus = "";
+  view.message = "";
+  view.sheetMessage = "";
 }
 
 function syncPadDraft() {
@@ -291,6 +355,7 @@ function commitPad() {
 }
 
 function togglePlayer(playerId) {
+  clearSavedNote();
   view.message = "";
   if (pickOf(playerId)) {
     view.night = { ...view.night, players: dropPick(view.night.players, playerId) };
@@ -319,31 +384,111 @@ function onStart() {
 }
 
 function onEnd() {
+  const canSave = sheetEnabled() && balanceNote(view.night.players).balanced;
+  const pin = canSave ? readPin() : "";
+  if (pin && !window.confirm("End the game and save this session?")) return;
   view.night = { ...view.night, phase: "final" };
   view.pad = null;
+  view.copyText = "";
   view.message = "";
+  view.sheetMessage = "";
+  view.saveStatus = pin ? "saving" : canSave ? "need-pin" : "";
+  view.focusPin = view.saveStatus === "need-pin";
   persist();
   paint();
+  if (view.saveStatus === "saving") void submitSession(pin);
 }
 
 function onBack() {
+  if (view.saveStatus === "saving") return;
   view.night = { ...view.night, phase: "play" };
   view.copyText = "";
   view.message = "";
+  view.sheetMessage = "";
+  view.saveStatus = "";
   persist();
   paint();
 }
 
 function onReset() {
+  if (view.saveStatus === "saving") return;
   const approved = window.confirm("Clear tonight's players, buy-ins, and stacks?");
   if (!approved) return;
   view.night = emptyNight(localDate());
   view.pad = null;
   view.copyText = "";
   view.message = "Tonight's game was cleared.";
+  view.sheetMessage = "";
+  view.saveStatus = "";
+  view.pinDraft = "";
   view.paintedPhase = "";
+  writeStorage(SAVE_KEY, "");
   persist();
   paint();
+}
+
+async function submitSession(pin) {
+  if (saving) return;
+  const players = view.night?.players;
+  if (!players || !balanceNote(players).balanced) {
+    view.saveStatus = "";
+    view.sheetMessage = "Saving stays off until the nets sum to 0. Go back and fix the stacks.";
+    paint();
+    return;
+  }
+  saving = true;
+  view.saveStatus = "saving";
+  view.sheetMessage = "";
+  paint();
+  try {
+    const ranked = rankedField(players, view.roster);
+    const base = maxSessionNumber(view.sessions);
+    const session = buildSessionPayload(ranked, view.night?.date, base);
+    const result = await postSession(SHEET_API_URL, buildSaveBody({
+      pin,
+      key: ensureSaveKey(),
+      base,
+      session,
+    }));
+    rememberPin(pin);
+    const saved = {
+      id: `session-${result.sessionNumber}`,
+      number: result.sessionNumber,
+      label: `Session ${result.sessionNumber}`,
+      entries: session.entries.map((entry) => ({ ...entry })),
+    };
+    if (session.date) saved.date = session.date;
+    writeStorage(SAVE_KEY, "");
+    view.night = emptyNight(localDate());
+    view.pad = null;
+    view.copyText = "";
+    view.pinDraft = "";
+    view.paintedPhase = "";
+    view.saveStatus = "saved";
+    view.sheetMessage = `Saved as Session ${result.sessionNumber}`;
+    view.message = view.sheetMessage;
+    view.sessions = mergeSessions(view.sessions, [saved]);
+    persist();
+    paint();
+    try {
+      await requestLedgerRefresh(saved);
+    } catch {
+      /* The session is already on the sheet. The next load will pick it up. */
+    }
+  } catch (error) {
+    view.sheetMessage = error?.message || "The session was not saved.";
+    view.message = "";
+    if (error?.pin) {
+      forgetPin();
+      view.saveStatus = "need-pin";
+      view.focusPin = true;
+    } else {
+      view.saveStatus = "error";
+    }
+    paint();
+  } finally {
+    saving = false;
+  }
 }
 
 function onDate(event) {
@@ -474,6 +619,11 @@ function focusAfterPaint() {
     view.padFocus = false;
     return;
   }
+  if (view.focusPin) {
+    root.querySelector(".lb-pin input")?.focus();
+    view.focusPin = false;
+    return;
+  }
   if (view.focusCopy) {
     const box = root.querySelector(".lb-copy");
     box?.focus();
@@ -505,14 +655,22 @@ function toolButton(label, attrs) {
 function renderTools() {
   const phase = view.night.phase;
   const full = screenIsFull();
+  const busy = view.saveStatus === "saving";
   return el("div", { class: "lb-tools" }, [
     toolButton(full ? "Exit full screen" : "Full screen", {
       "aria-pressed": full ? "true" : "false",
       onclick: () => { toggleScreen(); },
     }),
     phase === "play" ? toolButton("End game", { class: "lb-btn lb-btn-primary", onclick: onEnd }) : null,
-    phase === "final" ? toolButton("Back to board", { onclick: onBack }) : null,
-    toolButton("Reset", { class: "lb-btn lb-btn-quiet", onclick: onReset }),
+    phase === "final" ? toolButton("Back to board", {
+      disabled: busy ? true : null,
+      onclick: onBack,
+    }) : null,
+    toolButton("Reset", {
+      class: "lb-btn lb-btn-quiet",
+      disabled: busy ? true : null,
+      onclick: onReset,
+    }),
   ]);
 }
 
@@ -686,13 +844,20 @@ function renderFinal() {
         text: formatSigned(player.net),
       }),
     ]))),
+    renderSave(balance),
     el("div", { class: "lb-export" }, [
-      el("button", { type: "button", class: "lb-btn lb-btn-primary", onclick: () => { onCopy(); } }, "Copy results"),
+      el("button", {
+        type: "button",
+        class: sheetEnabled() ? "lb-btn" : "lb-btn lb-btn-primary",
+        onclick: () => { onCopy(); },
+      }, "Copy results"),
       el("button", { type: "button", class: "lb-btn", onclick: onDownload }, "Download JSON"),
     ]),
     el("p", {
       class: "note",
-      text: "Each line is the name, the buy-in, and the net. The file is one session to paste into data/sessions.json.",
+      text: sheetEnabled()
+        ? "Each line is the name, the buy-in, and the net. Copy and download stay available if the sheet does not save."
+        : "Each line is the name, the buy-in, and the net. The file is one session to paste into data/sessions.json.",
     }),
     view.copyText
       ? el("textarea", {
@@ -704,6 +869,76 @@ function renderFinal() {
         text: view.copyText,
       })
       : null,
+  ]);
+}
+
+function renderSave(balance) {
+  if (!sheetEnabled()) return null;
+  if (!balance.balanced) {
+    return el("p", {
+      class: "note",
+      text: view.sheetMessage || "Saving stays off until the nets sum to 0. Go back and fix the stacks.",
+    });
+  }
+  if (view.saveStatus === "saving") {
+    return el("p", { class: "lb-ok", role: "status", text: "Saving session…" });
+  }
+  const pin = readPin();
+  if (!pin || view.saveStatus === "need-pin") {
+    return pinForm(view.sheetMessage ? "Retry" : "Save session");
+  }
+  if (view.saveStatus === "error") {
+    return el("div", { class: "lb-save" }, [
+      el("p", { class: "lb-warn", role: "alert", text: view.sheetMessage || "The session was not saved." }),
+      el("button", {
+        type: "button",
+        class: "lb-btn lb-btn-primary",
+        onclick: () => { void submitSession(pin); },
+      }, "Retry"),
+    ]);
+  }
+  if (view.saveStatus === "saved") return null;
+  return el("button", {
+    type: "button",
+    class: "lb-btn lb-btn-primary lb-save-btn",
+    onclick: () => { void submitSession(pin); },
+  }, "Save session");
+}
+
+function pinForm(label) {
+  return el("form", {
+    class: "lb-save",
+    onsubmit: (event) => {
+      event.preventDefault();
+      const input = event.currentTarget.querySelector("input");
+      const pin = (input?.value || "").trim();
+      view.pinDraft = pin;
+      if (!pin) {
+        view.sheetMessage = "Enter the host PIN.";
+        view.saveStatus = "need-pin";
+        view.focusPin = true;
+        paint();
+        return;
+      }
+      void submitSession(pin);
+    },
+  }, [
+    el("label", { class: "lb-pin" }, [
+      el("span", { text: "Host PIN" }),
+      el("input", {
+        type: "password",
+        autocomplete: "off",
+        spellcheck: "false",
+        value: view.pinDraft,
+        oninput: (event) => {
+          view.pinDraft = event.target.value;
+        },
+      }),
+    ]),
+    view.sheetMessage
+      ? el("p", { class: "lb-warn", role: "alert", text: view.sheetMessage })
+      : null,
+    el("button", { type: "submit", class: "lb-btn lb-btn-primary" }, label),
   ]);
 }
 
@@ -806,7 +1041,7 @@ function renderApp() {
     view.saveError ? el("p", { class: "banner", role: "alert", text: view.saveError }) : null,
     renderHeader(),
     el("p", {
-      class: "lb-message",
+      class: `lb-message${view.saveStatus === "saved" ? " is-ok" : ""}`,
       role: "status",
       "aria-live": "polite",
       text: view.message,
@@ -818,6 +1053,10 @@ function renderApp() {
     ]),
     renderPad(),
   ]);
+}
+
+export function updateLiveSessions(sessions) {
+  view.sessions = Array.isArray(sessions) ? sessions : [];
 }
 
 export function mountLive(container, players, sessions) {

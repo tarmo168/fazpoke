@@ -2,13 +2,17 @@ import { avatar, el } from "./dom.js";
 import { formatAmount, formatSigned, signedClass } from "./format.js";
 import { buildModel, findPlayer, sortStandings } from "./stats.js";
 import { colorMap, mountChart, seriesFromPlayer } from "./chart.js";
-import { mountLive, unmountLive } from "./live.js";
+import { mountLive, unmountLive, updateLiveSessions } from "./live.js";
+import { SHEET_API_URL } from "./config.js";
+import { loadSheetSessions, mergeSessions, onLedgerRefresh, sheetEnabled } from "./sheets.js";
 
 const state = {
   players: [],
   sessions: [],
+  fileSessions: [],
   ready: false,
   error: "",
+  sheetNote: "",
   sortKey: "net",
   sortDir: "desc",
   highlightId: null,
@@ -402,6 +406,9 @@ function render() {
   const model = buildModel(state.players, state.sessions);
   const colors = colorMap(state.players, model.standings);
   const nodes = [];
+  if (state.sheetNote) {
+    nodes.push(el("div", { class: "banner", role: "status", text: state.sheetNote }));
+  }
   if (model.warnings.length) {
     nodes.push(el("div", { class: "banner", role: "status", text: model.warnings.join(" ") }));
   }
@@ -423,6 +430,18 @@ function render() {
   }
 }
 
+async function sessionsWithSheet(fileSessions) {
+  if (!sheetEnabled()) return fileSessions;
+  try {
+    const remote = await loadSheetSessions(SHEET_API_URL);
+    state.sheetNote = "";
+    return mergeSessions(fileSessions, remote);
+  } catch {
+    state.sheetNote = "The Google Sheet could not be loaded. Showing the saved ledger only.";
+    return fileSessions;
+  }
+}
+
 async function load() {
   try {
     const playersUrl = new URL("../data/players.json", import.meta.url);
@@ -433,13 +452,28 @@ async function load() {
     const sessions = await sessionsRes.json();
     if (!Array.isArray(players) || !Array.isArray(sessions)) throw new Error("shape");
     state.players = players;
-    state.sessions = sessions;
+    state.fileSessions = sessions;
+    state.sessions = await sessionsWithSheet(sessions);
     state.ready = true;
   } catch {
     state.error = "The ledger could not be loaded. Serve this folder over HTTP, or open it on GitHub Pages.";
   }
   render();
 }
+
+onLedgerRefresh(async (saved) => {
+  if (!state.ready) return;
+  try {
+    const remote = await loadSheetSessions(SHEET_API_URL);
+    state.sessions = mergeSessions(state.fileSessions, saved ? [...remote, saved] : remote);
+    state.sheetNote = "";
+  } catch {
+    state.sessions = saved ? mergeSessions(state.sessions, [saved]) : state.sessions;
+    state.sheetNote = "The Google Sheet could not be loaded. Showing the saved ledger only.";
+  }
+  updateLiveSessions(state.sessions);
+  if (!document.body.classList.contains("route-live")) render();
+});
 
 state.route = parseRoute();
 window.addEventListener("hashchange", () => {

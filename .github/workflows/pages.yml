@@ -30,7 +30,9 @@ jobs:
           for file in js/*.js; do
             node --check "$file"
           done
-          node --test tests/ledger.test.mjs tests/liveboard.test.mjs
+          cp apps-script/Code.gs /tmp/fazpoke-code.js
+          node --check /tmp/fazpoke-code.js
+          node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs
 
   deploy:
     needs: test

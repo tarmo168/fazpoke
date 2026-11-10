@@ -67,7 +67,7 @@ Replace `buyIn` and `net` with the real figures before you commit. Leave anyone 
 Check the sheet before pushing:
 
 ```bash
-node --test tests/ledger.test.mjs tests/liveboard.test.mjs
+node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs
 ```
 
 Recorded nets on a finished session should add up to `0`. The test locks Session 1 at buy-in `3,700` and net `0`.
@@ -83,6 +83,8 @@ The board ranks the table by live result: current stack minus buy-in tonight. Po
 Tap a player and enter the stack they have in front of them. **+ Re-buy** adds that amount to the buy-in and to the stack, so the result stays put until the next count. **Full screen** enlarges the type for a TV. The same page works in landscape on a phone. **Reset** clears the night after a confirm. A refresh keeps the night on this device.
 
 **End game** lists each buy-in and net, and checks that the nets sum to 0. **Copy results** writes one plain line per player, such as `Dom 400 +910`. **Download JSON** saves one session in the same shape as `data/sessions.json`, using the next session id. Paste that object into the ledger and fill in any figure that still needs correcting. **Back to board** returns to the stacks.
+
+To save the night without editing the file, set `SHEET_API_URL` in `js/config.js`. The steps are in `SETUP-GOOGLE-SHEET.md`. Leave that URL empty and nothing about the sheet runs. When it is set, End game asks once for the host PIN, saves the session, and the board, charts, and ledger include it. Saving stays off while the nets do not sum to 0. Copy and download remain if the sheet does not save.
 
 ## Add a player
 
