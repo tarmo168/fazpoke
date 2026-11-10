@@ -1,6 +1,6 @@
 import { avatar, el } from "./dom.js";
 import { formatAmount, formatSigned, signedClass } from "./format.js";
-import { buildModel, findPlayer, sortStandings } from "./stats.js";
+import { awardBadges, buildModel, cumulativeNets, findPlayer, rankMoves, sortStandings } from "./stats.js";
 import { colorMap, mountChart, seriesFromPlayer } from "./chart.js";
 import { mountLive, unmountLive, updateLiveSessions } from "./live.js";
 import { SHEET_API_URL } from "./config.js";
@@ -36,6 +36,134 @@ function parseRoute() {
 
 function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+const COUNT_MS = 800;
+const ROW_STAGGER_MS = 40;
+let motionGen = 0;
+let boardEntered = false;
+
+function easeOutCubic(t) {
+  return 1 - (1 - t) ** 3;
+}
+
+function formatCount(target, shown) {
+  if (shown === 0) {
+    if (target > 0) return "+0";
+    if (target < 0) return "-0";
+    return "0";
+  }
+  return formatSigned(shown);
+}
+
+function countUp(node, target, gen) {
+  const started = performance.now();
+  const frame = (now) => {
+    if (gen !== motionGen || !node.isConnected) return;
+    const t = Math.min(1, (now - started) / COUNT_MS);
+    const shown = t >= 1 ? target : Math.round(target * easeOutCubic(t));
+    node.textContent = t >= 1 ? formatSigned(target) : formatCount(target, shown);
+    if (t < 1) requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+function countBoard(root, gen) {
+  for (const node of root.querySelectorAll("[data-earnings]")) {
+    const target = Number(node.dataset.earnings);
+    if (!Number.isFinite(target)) continue;
+    countUp(node, target, gen);
+  }
+}
+
+function movementView(move) {
+  if (!move) return null;
+  if (move.change === "new") {
+    return {
+      text: "NEW",
+      tone: "new",
+      title: "First recorded result is in the latest session.",
+      phrase: "New",
+    };
+  }
+  if (move.change === "flat") {
+    return {
+      text: "–",
+      tone: "flat",
+      title: "No change in total earnings rank since the previous session.",
+      phrase: "Rank unchanged",
+    };
+  }
+  const places = `${move.places} ${move.places === 1 ? "place" : "places"}`;
+  if (move.change === "up") {
+    return {
+      text: `▲${move.places}`,
+      tone: "up",
+      title: `Up ${places} by total earnings since the previous session.`,
+      phrase: `Up ${places}`,
+    };
+  }
+  return {
+    text: `▼${move.places}`,
+    tone: "down",
+    title: `Down ${places} by total earnings since the previous session.`,
+    phrase: `Down ${places}`,
+  };
+}
+
+function sparkline(values) {
+  if (!values.length) return null;
+  const width = 64;
+  const height = 20;
+  const pad = 2;
+  const ns = "http://www.w3.org/2000/svg";
+  const end = values[values.length - 1];
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("class", `spark ${end >= 0 ? "up" : "down"}`);
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+
+  if (values.length === 1) {
+    const dot = document.createElementNS(ns, "circle");
+    dot.setAttribute("cx", String(width / 2));
+    dot.setAttribute("cy", String(height / 2));
+    dot.setAttribute("r", "2.2");
+    dot.setAttribute("fill", "currentColor");
+    svg.append(dot);
+    return svg;
+  }
+
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min;
+  const points = values.map((value, index) => {
+    const x = pad + (index / (values.length - 1)) * (width - pad * 2);
+    const y = span === 0
+      ? height / 2
+      : pad + (1 - (value - min) / span) * (height - pad * 2);
+    return `${x.toFixed(2)},${y.toFixed(2)}`;
+  });
+  const line = document.createElementNS(ns, "polyline");
+  line.setAttribute("points", points.join(" "));
+  line.setAttribute("fill", "none");
+  line.setAttribute("stroke", "currentColor");
+  line.setAttribute("stroke-width", "2");
+  line.setAttribute("stroke-linecap", "round");
+  line.setAttribute("stroke-linejoin", "round");
+  svg.append(line);
+  return svg;
+}
+
+function badgeNodes(list) {
+  if (!list?.length) return null;
+  return el("span", { class: "badges" }, list.map((badge) => el("span", {
+    class: `badge badge-${badge.id}`,
+    title: badge.title,
+  }, [
+    el("span", { class: "badge-mark", "aria-hidden": "true", text: badge.mark }),
+    el("span", { class: "badge-label", text: badge.label }),
+  ])));
 }
 
 function scrollToSection(section) {
@@ -87,11 +215,14 @@ function summary(model) {
   ]);
 }
 
-function board(model) {
+function board(model, enter) {
   const ranked = sortStandings(model.standings, state.sortKey, state.sortDir);
   const sortLabel = SORTS.find((item) => item.key === state.sortKey)?.label || "Total earnings";
   const direction = state.sortDir === "desc" ? "high to low" : "low to high";
   const sessionsLabel = (count) => (count === 1 ? "1 session" : `${count} sessions`);
+  const motion = enter && !prefersReducedMotion();
+  const moves = rankMoves(model.standings, model.sessions);
+  const badges = awardBadges(model.standings);
 
   const head = el("div", { class: "row row-head", "aria-hidden": "true" }, [
     el("span"),
@@ -101,19 +232,43 @@ function board(model) {
     el("span", { class: "col-net", text: "Total earnings" }),
   ]);
 
-  const rows = ranked.map((player, index) => el("a", {
-    class: `row${index === 0 ? " lead" : ""}`,
-    href: `#/player/${player.id}`,
-    "aria-label": `${index + 1}. ${player.name}. ${sessionsLabel(player.sessionsPlayed)}. Total earnings ${formatSigned(player.net)}.`,
-  }, [
-    el("span", { class: "rank num", text: String(index + 1) }),
-    avatar(player),
-    el("span", { class: "who" }, [
-      el("span", { class: "name", text: player.name }),
-    ]),
-    el("span", { class: "col-sessions num", text: String(player.sessionsPlayed) }),
-    el("span", { class: `col-net num ${signedClass(player.net)}`, text: formatSigned(player.net) }),
-  ]));
+  const rows = ranked.map((player, index) => {
+    const move = movementView(moves.get(player.id));
+    const playerBadges = badges.get(player.id) || [];
+    const badgePhrase = playerBadges.map((badge) => badge.label).join(", ");
+    const label = [
+      `${index + 1}. ${player.name}`,
+      move?.phrase,
+      badgePhrase,
+      sessionsLabel(player.sessionsPlayed),
+      `Total earnings ${formatSigned(player.net)}`,
+    ].filter(Boolean).join(". ");
+    return el("a", {
+      class: `row${index === 0 ? " lead" : ""}${motion ? " row-in" : ""}`,
+      href: `#/player/${player.id}`,
+      style: motion ? { "--row-delay": `${index * ROW_STAGGER_MS}ms` } : undefined,
+      "aria-label": `${label}.`,
+    }, [
+      el("span", { class: "rank" }, [
+        el("span", { class: "rank-num num", text: String(index + 1) }),
+        move ? el("span", { class: `move move-${move.tone}`, title: move.title, text: move.text }) : null,
+      ]),
+      avatar(player),
+      el("span", { class: "who" }, [
+        el("span", { class: "name", text: player.name }),
+        badgeNodes(playerBadges),
+      ]),
+      el("span", { class: "col-sessions num", text: String(player.sessionsPlayed) }),
+      el("span", { class: "col-net" }, [
+        sparkline(cumulativeNets(player)),
+        el("span", {
+          class: `earnings num ${signedClass(player.net)}`,
+          dataset: motion ? { earnings: String(player.net) } : undefined,
+          text: motion ? formatCount(player.net, 0) : formatSigned(player.net),
+        }),
+      ]),
+    ]);
+  });
 
   const unrecorded = model.unrecorded.map((player) => {
     const meta = player.history.length
@@ -383,6 +538,7 @@ function profile(model, colors) {
 }
 
 function render() {
+  const gen = ++motionGen;
   const main = document.querySelector("#content");
   const live = state.route.name === "live";
   syncNav();
@@ -413,18 +569,22 @@ function render() {
     nodes.push(el("div", { class: "banner", role: "status", text: model.warnings.join(" ") }));
   }
 
+  let enterBoard = false;
   if (state.route.name === "player") {
     nodes.push(profile(model, colors));
   } else {
     document.title = "Fazwazpoker";
+    enterBoard = !boardEntered;
+    boardEntered = true;
     const layout = el("div", { class: "layout" }, [
-      board(model),
+      board(model, enterBoard),
       charts(model, colors),
       ledger(model),
     ]);
     nodes.push(layout);
   }
   main.replaceChildren(...nodes);
+  if (enterBoard && !prefersReducedMotion()) countBoard(main, gen);
   for (const host of document.querySelectorAll(".chart-host")) {
     if (host._pendingSpec) mountChart(host, host._pendingSpec);
   }
