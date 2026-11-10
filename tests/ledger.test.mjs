@@ -26,6 +26,8 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.equal(model.totals.net, 0);
   assert.equal(model.sessions[0].buyIn, 3700);
   assert.equal(model.sessions[0].net, 0);
+  assert.equal(model.sessions[0].totalEarnings, 1790);
+  assert.equal(model.totals.totalEarnings, 1790);
   assert.equal(model.standings.reduce((sum, player) => sum + player.net, 0), 0);
   assert.equal(model.standings.reduce((sum, player) => sum + player.buyIn, 0), 3700);
   assert.deepEqual(
@@ -46,6 +48,35 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.equal(model.unrecorded.every((player) => player.points === null), true);
   assert.deepEqual(model.byId.get("chase").history.map((item) => item.net), [null]);
   assert.deepEqual(model.byId.get("na").history, []);
+});
+
+test("total earnings sums positive recorded nets and ignores blanks", () => {
+  const model = buildModel(
+    [{ id: "a", name: "A" }, { id: "b", name: "B" }, { id: "c", name: "C" }],
+    [
+      {
+        id: "s1",
+        label: "Session 1",
+        entries: [
+          { playerId: "a", buyIn: 100, net: 50 },
+          { playerId: "b", buyIn: 100, net: null },
+          { playerId: "c", buyIn: 100, net: 0 },
+        ],
+      },
+      {
+        id: "s2",
+        label: "Session 2",
+        entries: [
+          { playerId: "a", buyIn: 100, net: -20 },
+          { playerId: "b", buyIn: 100, net: 20 },
+          { playerId: "c", buyIn: 100, net: -15 },
+        ],
+      },
+    ],
+  );
+  assert.equal(model.sessions[0].totalEarnings, 50);
+  assert.equal(model.sessions[1].totalEarnings, 20);
+  assert.equal(model.totals.totalEarnings, 70);
 });
 
 test("leaderboard orders by total earnings, then sessions", () => {

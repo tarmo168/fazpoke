@@ -63,7 +63,7 @@ function summary(model) {
     ["Sessions", String(model.totals.sessions), ""],
     ["Recorded", String(model.totals.recordedPlayers), ""],
     ["Buy-in", formatAmount(model.totals.buyIn), ""],
-    ["Net", formatSigned(model.totals.net), signedClass(model.totals.net)],
+    ["Total earnings", formatAmount(model.totals.totalEarnings), ""],
   ];
   return el("div", { class: "ledger-totals" }, [
     el("div", { class: "summary", role: "group", "aria-label": "Totals" }, cells.map(([label, value, tone]) => el("div", {}, [
@@ -72,7 +72,7 @@ function summary(model) {
     ]))),
     el("p", {
       class: "summary-note",
-      text: "Totals add recorded results across every session.",
+      text: "Total earnings adds the winnings in each session. Unrecorded results are left out.",
     }),
   ]);
 }
@@ -100,7 +100,6 @@ function board(model) {
     avatar(player),
     el("span", { class: "who" }, [
       el("span", { class: "name", text: player.name }),
-      el("span", { class: "row-meta", text: sessionsLabel(player.sessionsPlayed) }),
     ]),
     el("span", { class: "col-sessions num", text: String(player.sessionsPlayed) }),
     el("span", { class: `col-net num ${signedClass(player.net)}`, text: formatSigned(player.net) }),
@@ -143,7 +142,7 @@ function board(model) {
       text: `Sorted by ${sortLabel.toLowerCase()}, ${direction}. Equal values fall back to total earnings, then name.`,
     }),
     ranked.length
-      ? el("div", { class: "rows" }, [head, ...rows])
+      ? el("div", { class: "rows standings" }, [head, ...rows])
       : el("p", { class: "note", text: "No recorded results yet." }),
     el("h2", { class: "subhead", text: "Unrecorded" }),
     el("p", {
@@ -228,7 +227,7 @@ function ledger(model) {
     el("h2", { text: "Sessions" }),
     el("p", {
       class: "note",
-      text: "Entries stay in the order they were written down. Session totals add recorded results only.",
+      text: "Entries stay in the order they were written down. Total earnings adds the winnings in that session. Unrecorded results are left out.",
     }),
     summary(model),
   ]);
@@ -273,7 +272,12 @@ function ledger(model) {
         el("tr", {}, [
           el("th", { scope: "row", text: "Recorded total" }),
           el("td", { class: "num", text: formatAmount(session.buyIn) }),
-          el("td", { class: `num ${signedClass(session.net)}`, text: formatSigned(session.net) }),
+          el("td"),
+        ]),
+        el("tr", {}, [
+          el("th", { scope: "row", text: "Total earnings" }),
+          el("td"),
+          el("td", { class: "num", text: formatAmount(session.totalEarnings) }),
         ]),
       ]),
     ]);
