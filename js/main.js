@@ -2,6 +2,7 @@ import { avatar, el } from "./dom.js";
 import { formatAmount, formatSigned, signedClass } from "./format.js";
 import { buildModel, findPlayer, sortStandings } from "./stats.js";
 import { colorMap, mountChart, seriesFromPlayer } from "./chart.js";
+import { mountLive, unmountLive } from "./live.js";
 
 const state = {
   players: [],
@@ -25,6 +26,7 @@ function parseRoute() {
     .split("/")
     .filter(Boolean);
   if (parts[0] === "player" && parts[1]) return { name: "player", id: parts[1] };
+  if (parts[0] === "live") return { name: "live" };
   return { name: "home", section: parts[0] || "" };
 }
 
@@ -42,7 +44,11 @@ function scrollToSection(section) {
 }
 
 function syncNav() {
-  const current = state.route.name === "home" ? state.route.section || "board" : "";
+  const current = state.route.name === "live"
+    ? "live"
+    : state.route.name === "home"
+      ? state.route.section || "board"
+      : "";
   for (const link of document.querySelectorAll("[data-nav]")) {
     if (link.dataset.nav === current) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
@@ -374,14 +380,22 @@ function profile(model, colors) {
 
 function render() {
   const main = document.querySelector("#content");
+  const live = state.route.name === "live";
   syncNav();
+  if (!live) unmountLive();
   if (state.error) {
     document.title = "Fazwazpoker";
     main.replaceChildren(el("p", { class: "banner", role: "alert", text: state.error }));
     return;
   }
   if (!state.ready) {
-    main.replaceChildren(el("p", { class: "note", text: "Loading ledger…" }));
+    main.replaceChildren(el("p", { class: "note", text: live ? "Loading the table…" : "Loading ledger…" }));
+    return;
+  }
+
+  if (live) {
+    document.title = "Live table · Fazwazpoker";
+    mountLive(main, state.players);
     return;
   }
 
@@ -432,11 +446,11 @@ window.addEventListener("hashchange", () => {
   const previous = state.route;
   state.route = parseRoute();
   render();
-    if (state.route.name === "player") {
-      window.scrollTo(0, 0);
-      document.querySelector("#content")?.focus({ preventScroll: true });
-      return;
-    }
+  if (state.route.name === "player" || state.route.name === "live") {
+    window.scrollTo(0, 0);
+    document.querySelector("#content")?.focus({ preventScroll: true });
+    return;
+  }
   if (state.route.section && (previous.name !== "home" || previous.section !== state.route.section)) {
     scrollToSection(state.route.section);
   }
