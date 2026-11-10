@@ -166,18 +166,22 @@ img { display: block; max-width: 100%; }
 #content:focus-visible { outline: none; }
 #board, #charts, #ledger { scroll-margin-top: 88px; }
 
+.ledger-totals {
+  margin-top: 16px;
+}
+
 .summary {
   display: grid;
   grid-template-columns: 1fr 1fr;
   border: 1px solid var(--line);
-  border-radius: 18px;
+  border-radius: 14px;
   overflow: hidden;
-  background: rgba(24, 33, 28, 0.78);
-  box-shadow: var(--shadow);
+  background: rgba(21, 32, 27, 0.9);
 }
 
 .summary > div {
-  padding: 14px 16px 12px;
+  padding: 10px 12px 9px;
+  min-width: 0;
 }
 
 .summary > div:nth-child(odd) { box-shadow: inset -1px 0 0 var(--line); }
@@ -196,22 +200,21 @@ img { display: block; max-width: 100%; }
 .summary strong {
   font-family: Fraunces, Palatino, Georgia, serif;
   font-weight: 560;
-  font-size: clamp(1.6rem, 4vw, 2.15rem);
+  font-size: clamp(1.25rem, 3.2vw, 1.65rem);
   letter-spacing: -0.03em;
   line-height: 1.05;
 }
 
 .summary-note {
-  margin: 10px 2px 0;
+  margin: 8px 2px 0;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
 }
 
 .layout {
   display: flex;
   flex-direction: column;
   gap: 28px;
-  margin-top: 28px;
 }
 
 .panel {
