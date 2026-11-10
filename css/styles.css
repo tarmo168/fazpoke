@@ -297,14 +297,61 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   min-height: 64px;
 }
 
+/* Header and player rows share one track list, so Sessions and Total earnings line up. */
+.standings {
+  --board-columns: 1.15rem 32px minmax(2.75rem, 1fr) 4.4rem 5rem;
+  --board-gap: 6px;
+  display: grid;
+  grid-template-columns: var(--board-columns);
+  column-gap: var(--board-gap);
+  row-gap: 0;
+  overflow-x: auto;
+}
+
+.standings > .row {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  column-gap: var(--board-gap);
+  row-gap: 0;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.standings > .row > * { min-width: 0; }
+
+.standings .avatar { width: 32px; height: 32px; }
+
+.standings .who { min-width: 0; overflow: hidden; }
+
+.standings .name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standings .col-sessions,
+.standings .col-net { text-align: right; }
+
 .row-head {
-  display: none;
   min-height: 0;
+  align-items: end;
+  padding-top: 0;
   padding-bottom: 4px;
   color: var(--faint);
   font-size: 0.72rem;
+  font-weight: 500;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+}
+
+.standings .row-head > span {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--faint);
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .row.lead { box-shadow: inset 2px 0 0 var(--brass); }
@@ -322,8 +369,13 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   letter-spacing: -0.02em;
 }
 
-.row-meta, .col-sessions { color: var(--muted); font-size: 0.86rem; }
-.col-sessions, .row-head .col-sessions { display: none; }
+.row-meta { color: var(--muted); font-size: 0.86rem; }
+
+.standings .row:not(.row-head) .col-sessions {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 430;
+}
 
 .col-net {
   font-size: 1.22rem;
@@ -332,11 +384,7 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   white-space: nowrap;
 }
 
-.row-head .col-net {
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-}
+.standings .row-head .col-net { white-space: normal; }
 
 .avatar {
   width: 48px;
@@ -664,13 +712,14 @@ tfoot th, tfoot td {
   .summary > div:nth-child(1) { box-shadow: inset -1px 0 0 var(--line); }
   .summary > div:last-child { box-shadow: none; }
 
-  .row, .row-head {
-    grid-template-columns: 2rem 48px minmax(0, 1.4fr) 5.2rem max-content;
+  .standings {
+    --board-columns: 2rem 48px minmax(0, 1fr) 4.4rem 7.75rem;
+    --board-gap: 12px;
   }
 
+  .standings .avatar { width: 48px; height: 48px; }
+  .standings .row-head .col-net { white-space: nowrap; }
   .row.quiet { grid-template-columns: 2rem 48px minmax(0, 1fr) auto; }
-  .row-head { display: grid; }
-  .col-sessions, .row-head .col-sessions { display: block; text-align: right; }
   .row-meta { display: none; }
   .panel { padding: 22px 22px 18px; }
 }

@@ -4,6 +4,10 @@
  * A result counts only when `net` is a finite number.
  * 0 is a recorded break-even and stays on the board.
  * null, or a missing net, is unrecorded and is never coerced to 0.
+ *
+ * Total earnings for a session is the sum of its positive recorded nets,
+ * the amount that changed hands. The all-sessions figure adds those up.
+ * Break-even and unrecorded results add nothing.
  */
 
 export function isRecordedNet(net) {
@@ -12,6 +16,12 @@ export function isRecordedNet(net) {
 
 function isFiniteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function totalEarnings(rows) {
+  return rows.reduce((sum, row) => (
+    row.recorded && row.net > 0 ? sum + row.net : sum
+  ), 0);
 }
 
 export function buildModel(players, sessions) {
@@ -73,6 +83,7 @@ export function buildModel(players, sessions) {
       label: session.label,
       buyIn,
       net,
+      totalEarnings: totalEarnings(rows),
       rows,
     });
   }
@@ -134,6 +145,7 @@ export function buildModel(players, sessions) {
     recordedPlayers: standings.length,
     buyIn: sessionViews.reduce((sum, session) => sum + session.buyIn, 0),
     net: sessionViews.reduce((sum, session) => sum + session.net, 0),
+    totalEarnings: sessionViews.reduce((sum, session) => sum + session.totalEarnings, 0),
   };
 
   return { standings, unrecorded, sessions: sessionViews, totals, warnings, byId };
