@@ -23,7 +23,7 @@ Pages has to be switched on once, with **Settings → Pages → Build and deploy
 - A profile for each player: photo, recorded stats, and the sessions they appear in.
 - A cumulative line for each recorded player, and one chart with every recorded player.
 - A session ledger in the order the entries were written.
-- A live table for the current home game: seating, a hand log, and percentages. It stays in the browser.
+- A live leaderboard for tonight's game: buy-ins, stacks, and the running result. It stays in the browser.
 
 ## How numbers work
 
@@ -67,26 +67,22 @@ Replace `buyIn` and `net` with the real figures before you commit. Leave anyone 
 Check the sheet before pushing:
 
 ```bash
-node --test tests/ledger.test.mjs tests/handstats.test.mjs tests/handstore.test.mjs
+node --test tests/ledger.test.mjs tests/liveboard.test.mjs
 ```
 
 Recorded nets on a finished session should add up to `0`. The test locks Session 1 at buy-in `3,700` and net `0`.
 
-## Live table
+## Live leaderboard
 
-Open **Live table** in the header. It is meant for a TV during a home game, and it works by tapping.
+Open **Live board** in the header. It is meant for a TV during a home game, and it works by tapping.
 
-Seat up to 10 players clockwise from the bottom. Tap a seat, then a player, or drag a player onto a seat. Each seat shows the photo and the name. Place the dealer button on one of them. The seating stays in the browser, so a refresh keeps it.
+Pick who is playing tonight. Photos come from the roster. Enter a starting buy-in for each player, then **Start**. The stack starts equal to that buy-in, so everyone opens at 0.
 
-**Start hand** begins on Pre-flop. **Next street** moves through Flop, Turn, River, and Showdown. Tap a seated player to fold them on the current street. The seat dims and reads `Folded – Flop` (or whichever street it was). **Undo** steps back. On Pre-flop, hold a seat or tap **VPIP** when someone voluntarily enters the pot.
+The board ranks the table by live result: current stack minus buy-in tonight. Positive results are green with a leading `+`. Negative results are red with a leading `-`. A break-even is `0`. Changing a stack re-sorts the board. The header shows the date, the number of players, and **In play** (the buy-ins added together). A small line shows when the board was last updated.
 
-The hand ends when one player is left. Otherwise tap **Name winners**, tap each winner (more than one splits the hand), and **Save hand**. The button then moves clockwise to the next seated player.
+Tap a player and enter the stack they have in front of them. **+ Re-buy** adds that amount to the buy-in and to the stack, so the result stays put until the next count. **Full screen** enlarges the type for a TV. The same page works in landscape on a phone. **Reset** clears the night after a confirm. A refresh keeps the night on this device.
 
-Percentages are on the same page. Fold percentage is folds on that street divided by hands that reached it with the player still in. VPIP, showdown, and showdown win are there too. A note shows when the log has fewer than 50 hands. **Head to head** puts two players side by side.
-
-**Full screen** enlarges the table for a TV. The same page works in landscape on a phone.
-
-Hands are kept in this browser, not in `data/sessions.json`. **Export JSON** downloads the log. **Import JSON** replaces it. No chip counts are stored. `js/handstore.js` is the storage layer: a later remote log, such as Google Sheets through Apps Script, can implement the same read and write methods.
+**End game** lists each buy-in and net, and checks that the nets sum to 0. **Copy results** writes one plain line per player, such as `Dom 400 +910`. **Download JSON** saves one session in the same shape as `data/sessions.json`, using the next session id. Paste that object into the ledger and fill in any figure that still needs correcting. **Back to board** returns to the stacks.
 
 ## Add a player
 
