@@ -32,7 +32,7 @@ jobs:
           done
           cp apps-script/Code.gs /tmp/fazpoke-code.js
           node --check /tmp/fazpoke-code.js
-          node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs
+          node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs
 
   deploy:
     needs: test

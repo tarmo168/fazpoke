@@ -167,3 +167,212 @@ export function findPlayer(model, id) {
     null
   );
 }
+
+/**
+ * Rank movement, streaks, and badges for the leaderboard.
+ *
+ * Movement compares each player's place after the latest session with
+ * their place after the previous one. Both rankings use cumulative
+ * recorded net, highest first, with the same name tie-break as the board.
+ * A player whose first recorded result is in the latest session is new.
+ * One session has no previous ranking, so every recorded player is new.
+ */
+
+function sum(values) {
+  return values.reduce((total, value) => total + value, 0);
+}
+
+function recordedEntries(player) {
+  const history = Array.isArray(player?.history) ? player.history : [];
+  return history.filter((item) => item && item.recorded && isRecordedNet(item.net));
+}
+
+function playerNets(player) {
+  if (Array.isArray(player?.nets)) return player.nets.filter(isRecordedNet);
+  return recordedEntries(player).map((item) => item.net);
+}
+
+function ranksByEarnings(rows) {
+  const ranks = new Map();
+  sortStandings(rows, "net", "desc").forEach((row, index) => {
+    ranks.set(row.id, index + 1);
+  });
+  return ranks;
+}
+
+export function rankMoves(players, sessions) {
+  const moves = new Map();
+  const list = Array.isArray(sessions) ? sessions : [];
+  const roster = Array.isArray(players) ? players : [];
+  if (!list.length) return moves;
+
+  const latestId = list[list.length - 1]?.id;
+  const current = [];
+  const previous = [];
+
+  for (const player of roster) {
+    const entries = recordedEntries(player);
+    if (!entries.length) continue;
+    const prior = entries.filter((item) => item.sessionId !== latestId);
+    current.push({
+      id: player.id,
+      name: player.name || "",
+      net: sum(entries.map((item) => item.net)),
+    });
+    if (!prior.length) moves.set(player.id, { change: "new", places: 0 });
+    else {
+      previous.push({
+        id: player.id,
+        name: player.name || "",
+        net: sum(prior.map((item) => item.net)),
+      });
+    }
+  }
+
+  const currentRank = ranksByEarnings(current);
+  const previousRank = ranksByEarnings(previous);
+  for (const row of previous) {
+    const delta = previousRank.get(row.id) - currentRank.get(row.id);
+    if (delta > 0) moves.set(row.id, { change: "up", places: delta });
+    else if (delta < 0) moves.set(row.id, { change: "down", places: -delta });
+    else moves.set(row.id, { change: "flat", places: 0 });
+  }
+  return moves;
+}
+
+/** Cumulative recorded net after each session the player has a result in. */
+export function cumulativeNets(player) {
+  let total = 0;
+  const points = [];
+  for (const item of recordedEntries(player)) {
+    total += item.net;
+    points.push(total);
+  }
+  return points;
+}
+
+/**
+ * Sign of the most recent recorded nets.
+ * Positive is a hot streak, negative is a cold streak.
+ * A break-even (0) ends the run. Fewer than 2 sessions is no streak.
+ */
+export function streak(nets) {
+  const values = (Array.isArray(nets) ? nets : []).filter(isRecordedNet);
+  let type = null;
+  let length = 0;
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    const value = values[index];
+    if (value === 0) break;
+    const sign = value > 0 ? "hot" : "cold";
+    if (type == null) type = sign;
+    if (sign !== type) break;
+    length += 1;
+  }
+  if (type == null || length < 2) return { type: null, length: 0 };
+  return { type, length };
+}
+
+/** Population standard deviation. Describes the recorded nets themselves. */
+export function standardDeviation(values) {
+  const nums = (Array.isArray(values) ? values : []).filter(isRecordedNet);
+  if (!nums.length) return 0;
+  const mean = sum(nums) / nums.length;
+  const variance = sum(nums.map((value) => (value - mean) ** 2)) / nums.length;
+  return Math.sqrt(variance);
+}
+
+function sameSpread(left, right) {
+  const scale = Math.max(1, Math.abs(left), Math.abs(right));
+  return Math.abs(left - right) <= scale * 1e-9;
+}
+
+/** Ids with the lowest std dev among players who have `minimum` recorded nets. */
+export function mostConsistent(players, minimum = 3) {
+  const eligible = [];
+  for (const player of players || []) {
+    const nets = playerNets(player);
+    if (nets.length < minimum) continue;
+    eligible.push({ id: player.id, spread: standardDeviation(nets) });
+  }
+  if (!eligible.length) return [];
+  const best = Math.min(...eligible.map((item) => item.spread));
+  return eligible.filter((item) => sameSpread(item.spread, best)).map((item) => item.id);
+}
+
+const BADGE_LIMIT = 2;
+
+const BADGES = {
+  chip: {
+    id: "chip",
+    mark: "👑",
+    label: "Chip leader",
+    title: "Highest total earnings.",
+  },
+  consistent: {
+    id: "consistent",
+    mark: "🎯",
+    label: "Most consistent",
+    title: "Lowest standard deviation of session net among players with 3 or more recorded sessions.",
+  },
+  win: {
+    id: "win",
+    mark: "📈",
+    label: "Biggest win",
+    title: "Highest single session net.",
+  },
+};
+
+function streakBadge(type, length) {
+  const word = type === "hot" ? "Positive" : "Negative";
+  return {
+    id: type,
+    mark: type === "hot" ? "🔥" : "🧊",
+    label: type === "hot" ? "Hot streak" : "Cold streak",
+    title: `${word} net in ${length} consecutive most-recent recorded sessions.`,
+  };
+}
+
+/**
+ * Up to two badges per player, in this order:
+ * chip leader, hot streak, cold streak, most consistent, biggest win.
+ * Ties go to every player who shares the mark. Consistency is omitted
+ * when nobody has 3 recorded sessions.
+ */
+export function awardBadges(players) {
+  const rows = [];
+  for (const player of players || []) {
+    const nets = playerNets(player);
+    const net = isRecordedNet(player?.net) ? player.net : (nets.length ? sum(nets) : null);
+    if (net == null) continue;
+    rows.push({ id: player.id, net, nets });
+  }
+
+  const bestTotal = rows.length ? Math.max(...rows.map((row) => row.net)) : null;
+  const leaders = new Set(
+    bestTotal == null ? [] : rows.filter((row) => row.net === bestTotal).map((row) => row.id),
+  );
+  const consistent = new Set(mostConsistent(rows));
+  let bestSession = null;
+  for (const row of rows) {
+    for (const net of row.nets) {
+      if (bestSession == null || net > bestSession) bestSession = net;
+    }
+  }
+  const winners = new Set(
+    bestSession == null
+      ? []
+      : rows.filter((row) => row.nets.some((net) => net === bestSession)).map((row) => row.id),
+  );
+
+  const awarded = new Map();
+  for (const row of rows) {
+    const run = streak(row.nets);
+    const picked = [];
+    if (leaders.has(row.id)) picked.push({ ...BADGES.chip });
+    if (run.type === "hot" || run.type === "cold") picked.push(streakBadge(run.type, run.length));
+    if (consistent.has(row.id)) picked.push({ ...BADGES.consistent });
+    if (winners.has(row.id)) picked.push({ ...BADGES.win });
+    awarded.set(row.id, picked.slice(0, BADGE_LIMIT));
+  }
+  return awarded;
+}

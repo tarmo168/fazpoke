@@ -299,7 +299,7 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
 
 /* Header and player rows share one track list, so Sessions and Total earnings line up. */
 .standings {
-  --board-columns: 1.15rem 32px minmax(2.75rem, 1fr) 4.4rem 5rem;
+  --board-columns: 2.55rem 32px minmax(0, 1fr) 4.4rem auto;
   --board-gap: 6px;
   display: grid;
   grid-template-columns: var(--board-columns);
@@ -322,9 +322,19 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
 
 .standings .avatar { width: 32px; height: 32px; }
 
-.standings .who { min-width: 0; overflow: hidden; }
+.standings .who {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  overflow: hidden;
+}
 
 .standings .name {
+  min-width: 0;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -332,6 +342,18 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
 
 .standings .col-sessions,
 .standings .col-net { text-align: right; }
+
+.standings .col-net {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.standings .earnings {
+  font-size: 1.22rem;
+  font-weight: 680;
+}
 
 .row-head {
   min-height: 0;
@@ -363,6 +385,114 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   text-align: center;
 }
 
+.standings .rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.rank-num {
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+}
+
+.move {
+  font-family: Outfit, "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.move-up { color: var(--up); }
+.move-down { color: var(--down); }
+.move-flat { color: var(--faint); }
+.move-new {
+  color: var(--brass);
+  font-size: 0.56rem;
+  letter-spacing: 0.04em;
+}
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-width: 100%;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 1px 7px 1px 5px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--brass-2);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.45;
+  white-space: nowrap;
+}
+
+.badge-hot {
+  color: var(--up);
+  border-color: rgba(61, 220, 151, 0.4);
+  background: rgba(61, 220, 151, 0.08);
+}
+
+.badge-cold {
+  color: var(--down);
+  border-color: rgba(255, 118, 118, 0.4);
+  background: rgba(255, 118, 118, 0.08);
+}
+
+.badge-chip {
+  border-color: rgba(228, 194, 122, 0.5);
+  background: rgba(228, 194, 122, 0.1);
+}
+
+.badge-mark { flex: none; }
+
+.badge-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spark {
+  width: 36px;
+  height: 16px;
+  flex: none;
+  display: block;
+  overflow: visible;
+}
+
+.spark.up { color: var(--up); }
+.spark.down { color: var(--down); }
+
+@keyframes board-cell-in {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.standings > .row-in > * {
+  animation: board-cell-in 480ms ease-out both;
+  animation-delay: var(--row-delay, 0ms);
+}
+
 .name {
   display: block;
   font-weight: 620;
@@ -384,7 +514,12 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   white-space: nowrap;
 }
 
-.standings .row-head .col-net { white-space: normal; }
+.standings .row-head .col-net {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: normal;
+}
 
 .avatar {
   width: 48px;
@@ -719,11 +854,21 @@ tfoot th, tfoot td {
   .summary > div:last-child { box-shadow: none; }
 
   .standings {
-    --board-columns: 2rem 48px minmax(0, 1fr) 4.4rem 7.75rem;
+    --board-columns: 3rem 48px minmax(0, 1fr) 4.4rem auto;
     --board-gap: 12px;
   }
 
+  .standings .who {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+  }
+
+  .standings .name { flex: 0 1 auto; }
+
   .standings .avatar { width: 48px; height: 48px; }
+  .spark { width: 64px; height: 20px; }
   .standings .row-head .col-net { white-space: nowrap; }
   .row.quiet { grid-template-columns: 2rem 48px minmax(0, 1fr) auto; }
   .row-meta { display: none; }
@@ -751,8 +896,15 @@ tfoot th, tfoot td {
   .history li span:nth-child(2) { grid-column: 1; }
 }
 
+@media (max-width: 379px) {
+  .spark,
+  .badge-label { display: none; }
+  .badge { padding-inline: 4px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { scroll-behavior: auto !important; }
+  .standings > .row-in > * { animation: none; }
 }
 
 @media print {

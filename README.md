@@ -67,7 +67,7 @@ Replace `buyIn` and `net` with the real figures before you commit. Leave anyone 
 Check the sheet before pushing:
 
 ```bash
-node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs
+node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs
 ```
 
 Recorded nets on a finished session should add up to `0`. The test locks Session 1 at buy-in `3,700` and net `0`.
