@@ -851,6 +851,8 @@ tfoot th, tfoot td {
   font-weight: 620;
 }
 
+.lb-message.is-ok { color: var(--up); }
+
 .lb-message:empty,
 .lb-pad-error:empty { display: none; }
 
@@ -1107,6 +1109,31 @@ tfoot th, tfoot td {
   line-height: 1.5;
   resize: vertical;
 }
+
+.lb-save {
+  display: grid;
+  gap: 8px;
+  max-width: 28rem;
+  margin-top: 16px;
+}
+
+.lb-pin {
+  display: grid;
+  gap: 6px;
+  font-weight: 650;
+}
+
+.lb-pin input {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  background: #0c100e;
+  font: inherit;
+}
+
+.lb-save-btn { margin-top: 16px; }
 
 .lb-shade {
   position: fixed;
