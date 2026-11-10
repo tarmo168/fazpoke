@@ -66,8 +66,8 @@ function summary(model) {
     ["Buy-in", formatAmount(model.totals.buyIn), ""],
     ["Net", formatSigned(model.totals.net), signedClass(model.totals.net)],
   ];
-  return el("section", { "aria-label": "Totals" }, [
-    el("div", { class: "summary" }, cells.map(([label, value, tone]) => el("div", {}, [
+  return el("div", { class: "ledger-totals" }, [
+    el("div", { class: "summary", role: "group", "aria-label": "Totals" }, cells.map(([label, value, tone]) => el("div", {}, [
       el("span", { class: "label", text: label }),
       el("strong", { class: `num ${tone}`, text: value }),
     ]))),
@@ -235,6 +235,7 @@ function ledger(model) {
       class: "note",
       text: "Entries stay in the order they were written down. Session totals add recorded results only.",
     }),
+    summary(model),
   ]);
 
   if (!model.sessions.length) {
@@ -401,7 +402,7 @@ function render() {
       charts(model, colors),
       ledger(model),
     ]);
-    nodes.push(summary(model), layout);
+    nodes.push(layout);
   }
   main.replaceChildren(...nodes);
   for (const host of document.querySelectorAll(".chart-host")) {
