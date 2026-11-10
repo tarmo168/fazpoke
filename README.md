@@ -18,7 +18,7 @@ Pages has to be switched on once, with **Settings → Pages → Build and deploy
 
 ## What the site shows
 
-- A leaderboard of cumulative net, sortable by net, total buy-in, or sessions played.
+- A leaderboard of total earnings (each player's net across every session), sortable by total earnings or sessions played.
 - A roster for anyone whose result is still unrecorded.
 - A profile for each player: photo, recorded stats, and the sessions they appear in.
 - A cumulative line for each recorded player, and one chart with every recorded player.
@@ -38,7 +38,7 @@ The chart draws a zero point labeled Start, before the first session in the file
 
 Sessions are plotted in file order. Keep the oldest session first.
 
-Equal values on the board fall back to net (high to low), then to name.
+Equal values on the board fall back to total earnings (high to low), then to name.
 
 ## Add a session
 

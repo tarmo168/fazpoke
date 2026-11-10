@@ -322,13 +322,20 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   letter-spacing: -0.02em;
 }
 
-.row-meta, .col-sessions, .col-buyin { color: var(--muted); font-size: 0.86rem; }
-.col-sessions, .col-buyin, .row-head .col-sessions, .row-head .col-buyin { display: none; }
+.row-meta, .col-sessions { color: var(--muted); font-size: 0.86rem; }
+.col-sessions, .row-head .col-sessions { display: none; }
 
 .col-net {
   font-size: 1.22rem;
   font-weight: 680;
   text-align: right;
+  white-space: nowrap;
+}
+
+.row-head .col-net {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
 }
 
 .avatar {
@@ -658,12 +665,12 @@ tfoot th, tfoot td {
   .summary > div:last-child { box-shadow: none; }
 
   .row, .row-head {
-    grid-template-columns: 2rem 48px minmax(0, 1.4fr) 5.2rem 6.2rem 6.6rem;
+    grid-template-columns: 2rem 48px minmax(0, 1.4fr) 5.2rem max-content;
   }
 
   .row.quiet { grid-template-columns: 2rem 48px minmax(0, 1fr) auto; }
   .row-head { display: grid; }
-  .col-sessions, .col-buyin, .row-head .col-sessions, .row-head .col-buyin { display: block; text-align: right; }
+  .col-sessions, .row-head .col-sessions { display: block; text-align: right; }
   .row-meta { display: none; }
   .panel { padding: 22px 22px 18px; }
 }

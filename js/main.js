@@ -16,8 +16,7 @@ const state = {
 };
 
 const SORTS = [
-  { key: "net", label: "Net" },
-  { key: "buyIn", label: "Buy-in" },
+  { key: "net", label: "Total earnings" },
   { key: "sessionsPlayed", label: "Sessions" },
 ];
 
@@ -80,34 +79,30 @@ function summary(model) {
 
 function board(model) {
   const ranked = sortStandings(model.standings, state.sortKey, state.sortDir);
-  const sortLabel = SORTS.find((item) => item.key === state.sortKey)?.label || "Net";
+  const sortLabel = SORTS.find((item) => item.key === state.sortKey)?.label || "Total earnings";
   const direction = state.sortDir === "desc" ? "high to low" : "low to high";
+  const sessionsLabel = (count) => (count === 1 ? "1 session" : `${count} sessions`);
 
   const head = el("div", { class: "row row-head", "aria-hidden": "true" }, [
     el("span"),
     el("span"),
     el("span", { text: "Player" }),
     el("span", { class: "col-sessions", text: "Sessions" }),
-    el("span", { class: "col-buyin", text: "Buy-in" }),
-    el("span", { class: "col-net", text: "Net" }),
+    el("span", { class: "col-net", text: "Total earnings" }),
   ]);
 
   const rows = ranked.map((player, index) => el("a", {
     class: `row${index === 0 ? " lead" : ""}`,
     href: `#/player/${player.id}`,
-    "aria-label": `${index + 1}. ${player.name}. ${player.sessionsPlayed} ${player.sessionsPlayed === 1 ? "session" : "sessions"}. Buy-in ${formatAmount(player.buyIn)}. Net ${formatSigned(player.net)}.`,
+    "aria-label": `${index + 1}. ${player.name}. ${sessionsLabel(player.sessionsPlayed)}. Total earnings ${formatSigned(player.net)}.`,
   }, [
     el("span", { class: "rank num", text: String(index + 1) }),
     avatar(player),
     el("span", { class: "who" }, [
       el("span", { class: "name", text: player.name }),
-      el("span", {
-        class: "row-meta",
-        text: `${player.sessionsPlayed === 1 ? "1 session" : `${player.sessionsPlayed} sessions`} · buy-in ${formatAmount(player.buyIn)}`,
-      }),
+      el("span", { class: "row-meta", text: sessionsLabel(player.sessionsPlayed) }),
     ]),
     el("span", { class: "col-sessions num", text: String(player.sessionsPlayed) }),
-    el("span", { class: "col-buyin num", text: formatAmount(player.buyIn) }),
     el("span", { class: `col-net num ${signedClass(player.net)}`, text: formatSigned(player.net) }),
   ]));
 
@@ -145,7 +140,7 @@ function board(model) {
     ]),
     el("p", {
       class: "note",
-      text: `Sorted by ${sortLabel.toLowerCase()}, ${direction}. Equal values fall back to net, then name.`,
+      text: `Sorted by ${sortLabel.toLowerCase()}, ${direction}. Equal values fall back to total earnings, then name.`,
     }),
     ranked.length
       ? el("div", { class: "rows" }, [head, ...rows])
