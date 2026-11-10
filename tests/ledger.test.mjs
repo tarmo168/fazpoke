@@ -28,6 +28,10 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.equal(model.sessions[0].net, 0);
   assert.equal(model.standings.reduce((sum, player) => sum + player.net, 0), 0);
   assert.equal(model.standings.reduce((sum, player) => sum + player.buyIn, 0), 3700);
+  assert.deepEqual(
+    Object.fromEntries(model.standings.map((player) => [player.id, player.buyIn])),
+    { dom: 400, will: 800, taam: 500, fah: 400, bank: 400, tip: 400, zack: 800 },
+  );
 
   const taam = model.standings.find((player) => player.id === "taam");
   assert.equal(taam.net, 0);
@@ -44,27 +48,45 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.deepEqual(model.byId.get("na").history, []);
 });
 
-test("default order and buy-in order", () => {
+test("leaderboard orders by total earnings, then sessions", () => {
   const model = buildModel(players, sessions);
-  const byNet = sortStandings(model.standings, "net", "desc");
-  assert.deepEqual(byNet.map((player) => player.id), [
+  const byEarnings = sortStandings(model.standings, "net", "desc");
+  assert.deepEqual(byEarnings.map((player) => player.id), [
     "dom", "will", "taam", "fah", "bank", "tip", "zack",
   ]);
-  assert.deepEqual(byNet.map((player) => player.net), [910, 880, 0, -190, -400, -400, -800]);
+  assert.deepEqual(byEarnings.map((player) => player.net), [910, 880, 0, -190, -400, -400, -800]);
 
-  const byBuyIn = sortStandings(model.standings, "buyIn", "desc");
-  assert.deepEqual(byBuyIn.map((player) => [player.id, player.buyIn]), [
-    ["will", 800],
-    ["zack", 800],
-    ["taam", 500],
-    ["dom", 400],
-    ["fah", 400],
-    ["bank", 400],
-    ["tip", 400],
+  const tiedSessions = sortStandings(model.standings, "sessionsPlayed", "desc");
+  assert.deepEqual(tiedSessions.map((player) => player.id), byEarnings.map((player) => player.id));
+
+  const mixed = buildModel(
+    [{ id: "a", name: "A" }, { id: "b", name: "B" }, { id: "c", name: "C" }],
+    [
+      {
+        id: "s1",
+        label: "Session 1",
+        entries: [
+          { playerId: "a", buyIn: 100, net: 10 },
+          { playerId: "b", buyIn: 100, net: 40 },
+          { playerId: "c", buyIn: 100, net: -50 },
+        ],
+      },
+      {
+        id: "s2",
+        label: "Session 2",
+        entries: [
+          { playerId: "a", buyIn: 100, net: 5 },
+          { playerId: "c", buyIn: 100, net: 20 },
+        ],
+      },
+    ],
+  );
+  const bySessions = sortStandings(mixed.standings, "sessionsPlayed", "desc");
+  assert.deepEqual(bySessions.map((player) => [player.id, player.sessionsPlayed, player.net]), [
+    ["a", 2, 15],
+    ["c", 2, -30],
+    ["b", 1, 40],
   ]);
-
-  const bySessions = sortStandings(model.standings, "sessionsPlayed", "asc");
-  assert.deepEqual(bySessions.map((player) => player.id), byNet.map((player) => player.id));
 });
 
 test("a blank result is never coerced to zero, and a skipped session carries the total", () => {
