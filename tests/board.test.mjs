@@ -256,9 +256,15 @@ test("badges award ties, cap at two, and hide consistency when nobody qualifies"
   const model = buildModel(players, sessions);
   const live = awardBadges(model.standings);
   assert.deepEqual(ids(live, "dom"), ["chip", "win"]);
-  for (const id of ["will", "taam", "fah", "bank", "tip", "zack"]) {
+  assert.deepEqual(ids(live, "zack"), ["fish"]);
+  const fish = live.get("zack")[0];
+  assert.equal(fish.mark, "🐟");
+  assert.equal(fish.label, "Fish");
+  assert.equal(fish.title, "Lowest total earnings.");
+  for (const id of ["will", "taam", "fah", "bank", "tip"]) {
     assert.deepEqual(ids(live, id), []);
   }
+  for (const player of model.unrecorded) assert.equal(live.has(player.id), false);
   assert.equal([...live.values()].some((list) => list.some((badge) => badge.id === "consistent")), false);
 
   const capped = awardBadges([
@@ -267,21 +273,68 @@ test("badges award ties, cap at two, and hide consistency when nobody qualifies"
     { id: "cee", name: "Cee", net: 3, nets: [1, 1, 1] },
   ]);
   assert.deepEqual(ids(capped, "ace"), ["chip", "hot"]);
-  assert.deepEqual(ids(capped, "bee"), ["cold", "win"]);
+  assert.deepEqual(ids(capped, "bee"), ["fish", "cold"]);
   assert.deepEqual(ids(capped, "cee"), ["hot", "consistent"]);
   assert.equal(capped.get("ace").length <= 2, true);
+  assert.equal(capped.get("bee").length <= 2, true);
 
   const tied = awardBadges([
     { id: "ann", name: "Ann", net: 10, nets: [10] },
     { id: "bob", name: "Bob", net: 10, nets: [10] },
   ]);
-  assert.deepEqual(ids(tied, "ann"), ["chip", "win"]);
-  assert.deepEqual(ids(tied, "bob"), ["chip", "win"]);
+  assert.deepEqual(ids(tied, "ann"), ["chip", "fish"]);
+  assert.deepEqual(ids(tied, "bob"), ["chip", "fish"]);
 
   const losingField = awardBadges([
     { id: "a", name: "A", net: -1, nets: [-1] },
     { id: "b", name: "B", net: -8, nets: [-8] },
   ]);
   assert.deepEqual(ids(losingField, "a"), ["chip", "win"]);
-  assert.deepEqual(ids(losingField, "b"), []);
+  assert.deepEqual(ids(losingField, "b"), ["fish"]);
+});
+
+test("fish marks every player tied for the lowest recorded total", () => {
+  const tiedLast = awardBadges([
+    { id: "top", name: "Top", net: 12, nets: [12] },
+    { id: "left", name: "Left", net: -4, nets: [-4] },
+    { id: "right", name: "Right", net: -4, nets: [1, -5] },
+    { id: "blank", name: "Blank", net: null, nets: [null] },
+    { id: "new", name: "New" },
+  ]);
+  assert.deepEqual(ids(tiedLast, "top"), ["chip", "win"]);
+  assert.deepEqual(ids(tiedLast, "left"), ["fish"]);
+  assert.deepEqual(ids(tiedLast, "right"), ["fish"]);
+  assert.equal(tiedLast.has("blank"), false);
+  assert.equal(tiedLast.has("new"), false);
+  for (const id of ["left", "right"]) {
+    const badge = tiedLast.get(id)[0];
+    assert.equal(badge.mark, "🐟");
+    assert.equal(badge.label, "Fish");
+    assert.equal(badge.title, "Lowest total earnings.");
+    assert.equal(/[$€£¥฿]|baht|dollar/i.test(`${badge.label} ${badge.title}`), false);
+  }
+
+  const fromHistory = awardBadges([
+    { id: "high", name: "High", net: 3, history: [{ net: 3, recorded: true }] },
+    {
+      id: "low",
+      name: "Low",
+      history: [{ net: -3, recorded: true }, { net: null, recorded: false }],
+    },
+    { id: "none", name: "None", history: [{ net: null, recorded: false }] },
+  ]);
+  assert.deepEqual(ids(fromHistory, "high"), ["chip", "win"]);
+  assert.deepEqual(ids(fromHistory, "low"), ["fish"]);
+  assert.equal(fromHistory.has("none"), false);
+
+  const even = awardBadges([
+    { id: "up", name: "Up", net: 5, nets: [5] },
+    { id: "flat", name: "Flat", net: 0, nets: [0] },
+  ]);
+  assert.deepEqual(ids(even, "up"), ["chip", "win"]);
+  assert.deepEqual(ids(even, "flat"), ["fish"]);
+
+  assert.equal(awardBadges([]).size, 0);
+  assert.equal(awardBadges(null).size, 0);
+  assert.equal(awardBadges([{ id: "blank", net: null }]).size, 0);
 });

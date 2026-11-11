@@ -320,6 +320,12 @@ const BADGES = {
     label: "Biggest win",
     title: "Highest single session net.",
   },
+  fish: {
+    id: "fish",
+    mark: "🐟",
+    label: "Fish",
+    title: "Lowest total earnings.",
+  },
 };
 
 function streakBadge(type, length) {
@@ -334,8 +340,9 @@ function streakBadge(type, length) {
 
 /**
  * Up to two badges per player, in this order:
- * chip leader, hot streak, cold streak, most consistent, biggest win.
- * Ties go to every player who shares the mark. Consistency is omitted
+ * chip leader, fish, hot streak, cold streak, most consistent, biggest win.
+ * Ties go to every player who shares the mark. Fish is the lowest total
+ * earnings among players with a recorded result. Consistency is omitted
  * when nobody has 3 recorded sessions.
  */
 export function awardBadges(players) {
@@ -348,8 +355,12 @@ export function awardBadges(players) {
   }
 
   const bestTotal = rows.length ? Math.max(...rows.map((row) => row.net)) : null;
+  const worstTotal = rows.length ? Math.min(...rows.map((row) => row.net)) : null;
   const leaders = new Set(
     bestTotal == null ? [] : rows.filter((row) => row.net === bestTotal).map((row) => row.id),
+  );
+  const fish = new Set(
+    worstTotal == null ? [] : rows.filter((row) => row.net === worstTotal).map((row) => row.id),
   );
   const consistent = new Set(mostConsistent(rows));
   let bestSession = null;
@@ -369,6 +380,7 @@ export function awardBadges(players) {
     const run = streak(row.nets);
     const picked = [];
     if (leaders.has(row.id)) picked.push({ ...BADGES.chip });
+    if (fish.has(row.id)) picked.push({ ...BADGES.fish });
     if (run.type === "hot" || run.type === "cold") picked.push(streakBadge(run.type, run.length));
     if (consistent.has(row.id)) picked.push({ ...BADGES.consistent });
     if (winners.has(row.id)) picked.push({ ...BADGES.win });

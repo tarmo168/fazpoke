@@ -522,6 +522,12 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   background: rgba(228, 194, 122, 0.1);
 }
 
+.badge-fish {
+  color: #9ec9e8;
+  border-color: rgba(140, 190, 220, 0.45);
+  background: rgba(140, 190, 220, 0.1);
+}
+
 .badge-mark { flex: none; }
 
 .badge-label {
