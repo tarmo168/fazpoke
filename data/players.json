@@ -48,5 +48,10 @@
     "id": "zack",
     "name": "Zack",
     "photo": "assets/players/zack.png"
+  },
+  {
+    "id": "guy",
+    "name": "Guy",
+    "photo": "assets/players/guy.png"
   }
 ]

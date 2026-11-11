@@ -33,7 +33,7 @@ Figures are plain numbers. Positive results use a leading `+`. Negative results 
 
 `null` means the result was not written down. That entry stays on the roster and in the ledger as unrecorded. It is left out of rankings, buy-in totals, net totals, and charts. It is not stored or counted as zero.
 
-Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na has no session entry at all. All three stay off the board.
+Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na and Guy have no session entry at all. All four stay off the board.
 
 The chart draws a zero point labeled Start, before the first session in the file. That point is the baseline of a cumulative line, not an extra session. A later session with no recorded result keeps the previous cumulative total and is drawn as a hollow point.
 
@@ -126,7 +126,7 @@ Use a lowercase id with no spaces. The photo is a PNG with a transparent circle 
 
 ## Photos
 
-The current faces were cropped from the group screenshots, top to bottom:
+The current faces were cropped from the group screenshots, top to bottom. Guy was added separately, so that row has no screenshot label:
 
 | File | Player | Screenshot label |
 | --- | --- | --- |
@@ -140,6 +140,7 @@ The current faces were cropped from the group screenshots, top to bottom:
 | `assets/players/tip.png` | Tip | Tip |
 | `assets/players/will.png` | Will | will |
 | `assets/players/zack.png` | Zack | Zack |
+| `assets/players/guy.png` | Guy | — |
 
 The site uses the display names in this table, not the screenshot labels.
 
