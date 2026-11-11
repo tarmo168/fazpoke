@@ -71,6 +71,7 @@ export function buildModel(players, sessions) {
         player.history.push({
           sessionId: session.id,
           label: session.label,
+          date: typeof session.date === "string" ? session.date : "",
           buyIn: row.buyIn,
           net: row.net,
           recorded,
@@ -78,14 +79,17 @@ export function buildModel(players, sessions) {
       }
     }
 
-    sessionViews.push({
+    const view = {
       id: session.id,
       label: session.label,
+      date: typeof session.date === "string" ? session.date : "",
       buyIn,
       net,
       totalEarnings: totalEarnings(rows),
       rows,
-    });
+    };
+    if (Number.isSafeInteger(session.number) && session.number > 0) view.number = session.number;
+    sessionViews.push(view);
   }
 
   const standings = [];

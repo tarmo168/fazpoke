@@ -22,8 +22,10 @@ Pages has to be switched on once, with **Settings → Pages → Build and deploy
 - A roster for anyone whose result is still unrecorded.
 - A profile for each player: photo, recorded stats, and the sessions they appear in.
 - A cumulative line for each recorded player, and one chart with every recorded player.
-- A session ledger in the order the entries were written.
+- A session ledger. One night is on screen at a time, with the latest session open until another is chosen. Entries stay in the order they were written.
 - A live leaderboard for tonight's game: buy-ins, stacks, and the running result. It stays in the browser.
+
+`#/sessions/1` opens Session 1. `#/ledger` still opens the ledger, on the latest session.
 
 ## How numbers work
 
@@ -46,7 +48,8 @@ Equal values on the board fall back to total earnings (high to low), then to nam
 Append one object to the array in `data/sessions.json`.
 
 - `id`: a new unique id, for example `session-2`.
-- `label`: the name to show. This group labels them `Session 1`, `Session 2`, and so on. Leave a date out unless one was actually recorded.
+- `label`: the name to show. This group labels them `Session 1`, `Session 2`, and so on.
+- `date`: the night it was played, as `YYYY-MM-DD`, when that night is known. Session 1 is `2026-11-06`. Leave `date` out when the night was not recorded.
 - `entries`: one object per player you want on that session's sheet.
   - `playerId` must match an `id` in `data/players.json`.
   - `buyIn` is a number.
@@ -56,6 +59,7 @@ Append one object to the array in `data/sessions.json`.
 {
   "id": "session-2",
   "label": "Session 2",
+  "date": "2026-11-13",
   "entries": [
     { "playerId": "taam", "buyIn": 0, "net": null }
   ]
@@ -67,7 +71,7 @@ Replace `buyIn` and `net` with the real figures before you commit. Leave anyone 
 Check the sheet before pushing:
 
 ```bash
-node --test tests/ledger.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs tests/share.test.mjs
+node --test tests/ledger.test.mjs tests/sessions.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs tests/share.test.mjs
 ```
 
 Recorded nets on a finished session should add up to `0`. The test locks Session 1 at buy-in `3,700` and net `0`.
