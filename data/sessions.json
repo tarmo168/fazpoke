@@ -2,6 +2,7 @@
   {
     "id": "session-1",
     "label": "Session 1",
+    "date": "2026-11-06",
     "entries": [
       { "playerId": "dom", "buyIn": 400, "net": 910 },
       { "playerId": "will", "buyIn": 800, "net": 880 },

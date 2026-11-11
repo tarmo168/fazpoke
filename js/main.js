@@ -6,6 +6,7 @@ import { mountLive, unmountLive, updateLiveSessions } from "./live.js";
 import { SHEET_API_URL } from "./config.js";
 import { loadSheetSessions, mergeSessions, onLedgerRefresh, sheetEnabled } from "./sheets.js";
 import { closeInvite, openInvite } from "./invite.js";
+import { parseHash, sessionHash, sessionHeading, sessionPage } from "./sessions.js";
 import {
   SITE_URL,
   canWebShare,
@@ -25,8 +26,10 @@ const state = {
   sortDir: "desc",
   highlightId: null,
   selectedId: null,
-  route: { name: "home", section: "" },
+  route: { name: "home", section: "", session: "" },
 };
+
+let focusSessionTab = false;
 
 const SORTS = [
   { key: "net", label: "Total earnings" },
@@ -34,12 +37,7 @@ const SORTS = [
 ];
 
 function parseRoute() {
-  const parts = decodeURIComponent(location.hash.replace(/^#/, ""))
-    .split("/")
-    .filter(Boolean);
-  if (parts[0] === "player" && parts[1]) return { name: "player", id: parts[1] };
-  if (parts[0] === "live") return { name: "live" };
-  return { name: "home", section: parts[0] || "" };
+  return parseHash(location.hash);
 }
 
 function prefersReducedMotion() {
@@ -204,6 +202,12 @@ function setSort(key) {
   render();
 }
 
+function openSession(hash) {
+  if (location.hash === hash) return;
+  focusSessionTab = true;
+  location.hash = hash;
+}
+
 function summary(model) {
   const cells = [
     ["Sessions", String(model.totals.sessions), ""],
@@ -212,7 +216,8 @@ function summary(model) {
     ["Total earnings", formatAmount(model.totals.totalEarnings), ""],
   ];
   return el("div", { class: "ledger-totals" }, [
-    el("div", { class: "summary", role: "group", "aria-label": "Totals" }, cells.map(([label, value, tone]) => el("div", {}, [
+    el("p", { class: "section-kicker", text: "All time" }),
+    el("div", { class: "summary", role: "group", "aria-label": "All-time totals" }, cells.map(([label, value, tone]) => el("div", {}, [
       el("span", { class: "label", text: label }),
       el("strong", { class: `num ${tone}`, text: value }),
     ]))),
@@ -395,67 +400,82 @@ function charts(model, colors) {
 }
 
 function ledger(model) {
+  const page = sessionPage(model.sessions, state.route.session);
   const section = el("section", { class: "panel", id: "ledger" }, [
-    el("p", { class: "section-kicker", text: "Ledger" }),
-    el("h2", { text: "Sessions" }),
+    el("p", { class: "section-kicker", text: "Sessions" }),
+    el("h2", { id: "session-heading", text: page.heading || "Sessions" }),
     el("p", {
       class: "note",
-      text: "Entries stay in the order they were written down. Total earnings adds the winnings in that session. Unrecorded results are left out.",
+      text: page.session
+        ? "One session at a time. Entries stay in the order they were written down. Total earnings adds the winnings in this session. Unrecorded results are left out."
+        : "Entries stay in the order they were written down. Total earnings adds the winnings in a session. Unrecorded results are left out.",
     }),
     summary(model),
   ]);
 
-  if (!model.sessions.length) {
+  if (!page.session) {
     section.append(el("p", { class: "note", text: "No sessions yet." }));
     return section;
   }
 
-  for (const session of model.sessions) {
-    const table = el("table", {}, [
-      el("caption", { text: session.label }),
-      el("thead", {}, [
-        el("tr", {}, [
-          el("th", { scope: "col", text: "Player" }),
-          el("th", { scope: "col", class: "num", text: "Buy-in" }),
-          el("th", { scope: "col", class: "num", text: "Net" }),
-        ]),
-      ]),
-      el("tbody", {}, session.rows.map((row) => {
-        const person = model.byId.get(row.playerId);
-        const name = person?.name || row.playerId;
-        const who = el("span", { class: "who" }, [
-          avatar(person || { name }),
-          person
-            ? el("a", { href: `#/player/${person.id}`, text: name })
-            : el("span", { text: name }),
-        ]);
-        const netCell = row.recorded
-          ? el("td", { class: `num ${signedClass(row.net)}`, text: formatSigned(row.net) })
-          : el("td", { class: "pending", text: "Unrecorded" });
-        const buyCell = row.buyIn == null
-          ? el("td", { class: "num", text: "—" })
-          : el("td", { class: "num", text: formatAmount(row.buyIn) });
-        return el("tr", {}, [
-          el("th", { scope: "row" }, who),
-          buyCell,
-          netCell,
-        ]);
-      })),
-      el("tfoot", {}, [
-        el("tr", {}, [
-          el("th", { scope: "row", text: "Recorded total" }),
-          el("td", { class: "num", text: formatAmount(session.buyIn) }),
-          el("td"),
-        ]),
-        el("tr", {}, [
-          el("th", { scope: "row", text: "Total earnings" }),
-          el("td"),
-          el("td", { class: "num", text: formatAmount(session.totalEarnings) }),
-        ]),
-      ]),
-    ]);
-    section.append(el("div", { class: "table-wrap" }, table));
+  if (page.showTabs) {
+    section.append(el("div", {
+      class: "session-tabs",
+      role: "tablist",
+      "aria-label": "Sessions",
+    }, page.tabs.map((tab) => el("button", {
+      type: "button",
+      role: "tab",
+      "aria-selected": tab.selected ? "true" : "false",
+      "aria-controls": "session-sheet",
+      onclick: () => openSession(tab.hash),
+    }, tab.label))));
   }
+
+  const session = page.session;
+  const table = el("table", { id: "session-sheet", "aria-labelledby": "session-heading" }, [
+    el("thead", {}, [
+      el("tr", {}, [
+        el("th", { scope: "col", text: "Player" }),
+        el("th", { scope: "col", class: "num", text: "Buy-in" }),
+        el("th", { scope: "col", class: "num", text: "Net" }),
+      ]),
+    ]),
+    el("tbody", {}, session.rows.map((row) => {
+      const person = model.byId.get(row.playerId);
+      const name = person?.name || row.playerId;
+      const who = el("span", { class: "who" }, [
+        avatar(person || { name }),
+        person
+          ? el("a", { href: `#/player/${person.id}`, text: name })
+          : el("span", { text: name }),
+      ]);
+      const netCell = row.recorded
+        ? el("td", { class: `num ${signedClass(row.net)}`, text: formatSigned(row.net) })
+        : el("td", { class: "pending", text: "Unrecorded" });
+      const buyCell = row.buyIn == null
+        ? el("td", { class: "num", text: "—" })
+        : el("td", { class: "num", text: formatAmount(row.buyIn) });
+      return el("tr", {}, [
+        el("th", { scope: "row" }, who),
+        buyCell,
+        netCell,
+      ]);
+    })),
+    el("tfoot", {}, [
+      el("tr", {}, [
+        el("th", { scope: "row", text: "Recorded total" }),
+        el("td", { class: "num", text: formatAmount(session.buyIn) }),
+        el("td"),
+      ]),
+      el("tr", {}, [
+        el("th", { scope: "row", text: "Total earnings" }),
+        el("td"),
+        el("td", { class: "num", text: formatAmount(session.totalEarnings) }),
+      ]),
+    ]),
+  ]);
+  section.append(el("div", { class: "table-wrap" }, table));
 
   return section;
 }
@@ -531,7 +551,10 @@ function profile(model, colors) {
     history.append(el("p", { class: "note", text: "No session on record." }));
   } else {
     history.append(el("ul", { class: "history" }, player.history.map((item) => el("li", {}, [
-      el("a", { href: "#/ledger", text: item.label }),
+      el("a", {
+        href: sessionHash({ id: item.sessionId, label: item.label }),
+        text: sessionHeading(item),
+      }),
       el("span", {
         class: "num",
         text: item.buyIn == null ? "Buy-in —" : `Buy-in ${formatAmount(item.buyIn)}`,
@@ -545,7 +568,22 @@ function profile(model, colors) {
   return page;
 }
 
+function pinSelectedTab(row) {
+  const current = row.querySelector("[aria-selected='true']");
+  if (!current) return;
+  const rowBox = row.getBoundingClientRect();
+  const tabBox = current.getBoundingClientRect();
+  const left = tabBox.left - rowBox.left + row.scrollLeft;
+  const padding = 8;
+  if (left < row.scrollLeft) row.scrollLeft = Math.max(0, left - padding);
+  else if (left + tabBox.width > row.scrollLeft + row.clientWidth) {
+    row.scrollLeft = left + tabBox.width - row.clientWidth + padding;
+  }
+}
+
 function render() {
+  const focusTab = focusSessionTab;
+  focusSessionTab = false;
   const gen = ++motionGen;
   const main = document.querySelector("#content");
   const live = state.route.name === "live";
@@ -592,6 +630,9 @@ function render() {
     nodes.push(layout);
   }
   main.replaceChildren(...nodes);
+  const tabRow = main.querySelector(".session-tabs");
+  if (tabRow) pinSelectedTab(tabRow);
+  if (focusTab) tabRow?.querySelector("[aria-selected='true']")?.focus({ preventScroll: true });
   if (enterBoard && !prefersReducedMotion()) countBoard(main, gen);
   for (const host of document.querySelectorAll(".chart-host")) {
     if (host._pendingSpec) mountChart(host, host._pendingSpec);

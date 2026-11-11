@@ -15,9 +15,10 @@ test("roster and session 1 are the recorded sheet", () => {
   ]);
   assert.equal(sessions.length, 1);
   assert.equal(sessions[0].label, "Session 1");
-  assert.equal("date" in sessions[0], false);
+  assert.equal(sessions[0].date, "2026-11-06");
   const blob = JSON.stringify(players) + JSON.stringify(sessions);
-  assert.equal(/\d{4}-\d{2}-\d{2}|vpip|hourly/i.test(blob), false);
+  assert.deepEqual(blob.match(/\d{4}-\d{2}-\d{2}/g), ["2026-11-06"]);
+  assert.equal(/vpip|hourly/i.test(blob), false);
 });
 
 test("session 1 totals and the break-even stay exact", () => {

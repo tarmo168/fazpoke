@@ -720,6 +720,36 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
 
 .chart-sub { margin-top: 22px; }
 
+.session-tabs {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  margin-top: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  padding: 2px 2px 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.session-tabs button {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.02);
+  white-space: nowrap;
+}
+
+.session-tabs button[aria-selected="true"] {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: #1c1508;
+  font-weight: 650;
+}
+
 .table-wrap { overflow-x: auto; margin-top: 16px; }
 
 table {
@@ -996,7 +1026,7 @@ tfoot th, tfoot td {
 
 @media print {
   body { background: white; color: black; }
-  body::before, .tabs, .sort, .back, .chart-tip, .bar-actions, .invite-dialog { display: none !important; }
+  body::before, .tabs, .sort, .session-tabs, .back, .chart-tip, .bar-actions, .invite-dialog { display: none !important; }
   .panel, .summary { box-shadow: none; }
   .up { color: #0d7a45; }
   .down { color: #b42318; }
