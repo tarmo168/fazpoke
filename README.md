@@ -1,5 +1,7 @@
 # Fazwazpoker
 
+<!-- Private static site. Published from main by GitHub Pages. -->
+
 Private ledger for the group. It is a static site: plain HTML, CSS, and JavaScript, with no build step. Rankings, totals, and charts are calculated from the two data files.
 
 ## View it
