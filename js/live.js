@@ -2,8 +2,10 @@ import { avatar, el } from "./dom.js";
 import { formatAmount, formatSigned, signedClass } from "./format.js";
 import {
   NIGHT_KEY,
+  addPlayer,
   addRebuy,
   balanceNote,
+  canRemovePlayer,
   canStart,
   describePlayers,
   dropPick,
@@ -15,6 +17,7 @@ import {
   parseNight,
   parseWhole,
   rankedField,
+  removePlayer,
   sessionEntry,
   setBuyIn,
   setStack,
@@ -256,7 +259,13 @@ function openPad(mode, playerId) {
 function closePad() {
   if (!view.pad) return;
   const { mode, playerId } = view.pad;
-  view.focus = mode === "stack" ? `main-${playerId}` : mode === "rebuy" ? `rebuy-${playerId}` : `buy-${playerId}`;
+  view.focus = mode === "stack"
+    ? `main-${playerId}`
+    : mode === "rebuy"
+      ? `rebuy-${playerId}`
+      : mode === "join"
+        ? "add-player"
+        : `buy-${playerId}`;
   view.pad = null;
   paint();
 }
@@ -327,6 +336,28 @@ function commitPad() {
   const input = padInput();
   const amount = parseWhole(input ? input.value : view.pad.initial);
   const { mode, playerId } = view.pad;
+  if (mode === "join") {
+    if (!playerId) {
+      failPad(input, "Pick a player.");
+      return;
+    }
+    if (amount == null) {
+      failPad(input, "Enter the buy-in.");
+      return;
+    }
+    const players = addPlayer(view.night.players, playerId, amount);
+    if (players === view.night.players) {
+      failPad(input, "That player is already in the game.");
+      return;
+    }
+    view.night = { ...view.night, players, updatedAt: Date.now() };
+    view.focus = `main-${playerId}`;
+    view.pad = null;
+    view.message = `${personOf(playerId).name} joined.`;
+    persist();
+    paint();
+    return;
+  }
   if (mode === "rebuy") {
     if (amount == null || amount <= 0) {
       failPad(input, "Enter the re-buy.");
@@ -377,6 +408,50 @@ function togglePlayer(playerId) {
     players: [...view.night.players, { playerId, buyIn: null, stack: null }],
   };
   openPad("buyin", playerId);
+  persist();
+  paint();
+}
+
+function waitingPlayers() {
+  const playing = new Set(view.night.players.map((player) => player.playerId));
+  return view.roster.filter((person) => (
+    person && typeof person.id === "string" && person.id && !playing.has(person.id)
+  ));
+}
+
+function openAdd() {
+  if (!waitingPlayers().length) return;
+  view.message = "";
+  view.pad = {
+    mode: "join",
+    playerId: "",
+    initial: "",
+    error: "",
+    replace: false,
+  };
+  view.padFocus = true;
+  paint();
+}
+
+function chooseJoin(playerId) {
+  if (!view.pad || view.pad.mode !== "join") return;
+  if (!waitingPlayers().some((person) => person.id === playerId)) return;
+  view.pad.playerId = playerId;
+  view.pad.error = "";
+  view.padFocus = true;
+  paint();
+}
+
+function onRemove(playerId) {
+  const player = pickOf(playerId);
+  if (!canRemovePlayer(player)) return;
+  const name = personOf(playerId).name;
+  if (!window.confirm(`Remove ${name} from tonight's game?`)) return;
+  const players = removePlayer(view.night.players, playerId);
+  if (players === view.night.players) return;
+  if (view.pad?.playerId === playerId) view.pad = null;
+  view.night = { ...view.night, players, updatedAt: Date.now() };
+  view.message = `${name} was removed.`;
   persist();
   paint();
 }
@@ -636,11 +711,12 @@ function focusAfterPaint() {
   const root = view.container;
   if (!root) return;
   if (view.pad && view.padFocus) {
-    const input = root.querySelector(".lb-pad-input");
+    const joinList = view.pad.mode === "join" && !view.pad.playerId;
+    const input = joinList ? root.querySelector(".lb-join") : root.querySelector(".lb-pad-input");
     if (input) {
       input.focus();
-      if (view.pad.replace) input.select();
-      else {
+      if (!joinList && view.pad.replace) input.select();
+      else if (!joinList) {
         const end = input.value.length;
         input.setSelectionRange(end, end);
       }
@@ -712,6 +788,7 @@ function renderHeader() {
       el("h1", { text: "Live leaderboard" }),
     ]),
     renderTools(),
+    view.night.phase === "play" ? renderAddPlayer() : null,
     el("div", { class: "lb-facts", role: "group", "aria-label": "Tonight" }, [
       el("div", { class: "lb-fact" }, [
         el("span", { class: "lb-k", text: "Date" }),
@@ -795,6 +872,25 @@ function renderSetup() {
   ]);
 }
 
+function renderAddPlayer() {
+  const open = waitingPlayers().length > 0;
+  return el("div", { class: "lb-add-wrap" }, [
+    el("button", {
+      type: "button",
+      class: "lb-btn lb-btn-primary lb-add",
+      dataset: { focus: "add-player" },
+      disabled: open ? null : true,
+      "aria-describedby": open ? null : "lb-add-full",
+      onclick: openAdd,
+    }, "+ Add player"),
+    open ? null : el("p", {
+      id: "lb-add-full",
+      class: "note",
+      text: "Everyone on the roster is already in tonight's game.",
+    }),
+  ]);
+}
+
 function renderBoard() {
   const ranked = rankedField(view.night.players, view.roster);
   const strictLead = ranked.length > 0 && (ranked.length === 1 || ranked[0].net > ranked[1].net);
@@ -839,17 +935,27 @@ function renderBoard() {
               text: formatSigned(player.net),
             }),
           ]),
-          el("button", {
-            type: "button",
-            class: "lb-rebuy",
-            dataset: { focus: `rebuy-${player.playerId}` },
-            "aria-label": `Re-buy for ${player.name}`,
-            onclick: () => {
-              view.message = "";
-              openPad("rebuy", player.playerId);
-              paint();
-            },
-          }, "+ Re-buy"),
+          el("div", { class: "lb-row-actions" }, [
+            el("button", {
+              type: "button",
+              class: "lb-rebuy",
+              dataset: { focus: `rebuy-${player.playerId}` },
+              "aria-label": `Re-buy for ${player.name}`,
+              onclick: () => {
+                view.message = "";
+                openPad("rebuy", player.playerId);
+                paint();
+              },
+            }, "+ Re-buy"),
+            canRemovePlayer(player)
+              ? el("button", {
+                type: "button",
+                class: "lb-btn lb-btn-quiet lb-remove",
+                "aria-label": `Remove ${player.name}`,
+                onclick: () => onRemove(player.playerId),
+              }, "Remove")
+              : null,
+          ]),
         ]);
       }))
       : el("p", { class: "note", text: "No players in tonight's game." }),
@@ -1001,14 +1107,118 @@ function padAside(player) {
   return "";
 }
 
+function onPadInput(event) {
+  const clean = event.target.value.replace(/\D/g, "").slice(0, 8).replace(/^0+(?=\d)/, "");
+  if (clean !== event.target.value) event.target.value = clean;
+  if (!view.pad) return;
+  view.pad.initial = event.target.value;
+  view.pad.replace = false;
+  view.pad.error = "";
+  const error = view.container?.querySelector(".lb-pad-error");
+  if (error) error.textContent = "";
+}
+
+function renderKeys() {
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "delete"];
+  return el("div", { class: "lb-keys" }, keys.map((key) => {
+    if (key === "clear") {
+      return el("button", {
+        type: "button",
+        class: "lb-key lb-key-text",
+        onmousedown: keepFocus,
+        onclick: clearPad,
+      }, "Clear");
+    }
+    if (key === "delete") {
+      return el("button", {
+        type: "button",
+        class: "lb-key lb-key-text",
+        onmousedown: keepFocus,
+        "aria-label": "Delete last digit",
+        onclick: backspace,
+      }, "Delete");
+    }
+    return el("button", {
+      type: "button",
+      class: "lb-key",
+      onmousedown: keepFocus,
+      onclick: () => appendDigit(key),
+    }, key);
+  }));
+}
+
+function renderAmountField(label, value) {
+  return el("input", {
+    class: "lb-pad-input",
+    inputmode: "numeric",
+    autocomplete: "off",
+    autocapitalize: "off",
+    spellcheck: "false",
+    enterkeyhint: "done",
+    "aria-label": label,
+    value,
+    oninput: onPadInput,
+  });
+}
+
+function renderJoinPad(pad) {
+  const waiting = waitingPlayers();
+  const chosen = waiting.find((person) => person.id === pad.playerId) || null;
+  return el("div", {
+    class: "lb-shade",
+    onclick: (event) => {
+      if (event.target === event.currentTarget) closePad();
+    },
+  }, [
+    el("div", {
+      class: "lb-pad lb-pad-join",
+      role: "dialog",
+      "aria-modal": "true",
+      "aria-labelledby": "lb-pad-title",
+    }, [
+      el("p", { class: "lb-k", text: "Late join" }),
+      el("h2", { id: "lb-pad-title", text: chosen ? chosen.name : "Add player" }),
+      el("p", {
+        class: "lb-pad-note",
+        text: "Pick someone who is not in tonight's game. Their stack starts equal to the buy-in.",
+      }),
+      waiting.length
+        ? el("ul", { class: "lb-join-list" }, waiting.map((person) => el("li", {}, [
+          el("button", {
+            type: "button",
+            class: "lb-join",
+            "aria-pressed": person.id === pad.playerId ? "true" : "false",
+            onclick: () => chooseJoin(person.id),
+          }, [
+            avatar(person, "lb-join-photo"),
+            el("span", { class: "lb-name", text: person.name || person.id }),
+          ]),
+        ])))
+        : el("p", { class: "note", text: "Everyone on the roster is already in tonight's game." }),
+      renderAmountField(chosen ? `Buy-in for ${chosen.name || chosen.id}` : "Buy-in", pad.initial),
+      el("p", { class: "lb-pad-error", role: "alert", text: pad.error }),
+      renderKeys(),
+      el("div", { class: "lb-pad-actions" }, [
+        el("button", { type: "button", class: "lb-btn lb-btn-quiet", onclick: closePad }, "Cancel"),
+        el("button", {
+          type: "button",
+          class: "lb-btn lb-btn-primary",
+          disabled: waiting.length ? null : true,
+          onclick: commitPad,
+        }, "Add player"),
+      ]),
+    ]),
+  ]);
+}
+
 function renderPad() {
   const pad = view.pad;
   if (!pad) return null;
+  if (pad.mode === "join") return renderJoinPad(pad);
   const person = personOf(pad.playerId);
   const player = pickOf(pad.playerId);
   const copy = PAD_COPY[pad.mode];
   const aside = padAside(player);
-  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "clear", "0", "delete"];
   return el("div", {
     class: "lb-shade",
     onclick: (event) => {
@@ -1030,52 +1240,9 @@ function renderPad() {
       ]),
       copy.note ? el("p", { class: "lb-pad-note", text: copy.note }) : null,
       aside ? el("p", { class: "lb-pad-was", text: aside }) : null,
-      el("input", {
-        class: "lb-pad-input",
-        inputmode: "numeric",
-        autocomplete: "off",
-        autocapitalize: "off",
-        spellcheck: "false",
-        enterkeyhint: "done",
-        "aria-label": copy.kicker,
-        value: pad.initial,
-        oninput: (event) => {
-          const clean = event.target.value.replace(/\D/g, "").slice(0, 8).replace(/^0+(?=\d)/, "");
-          if (clean !== event.target.value) event.target.value = clean;
-          if (!view.pad) return;
-          view.pad.initial = event.target.value;
-          view.pad.replace = false;
-          view.pad.error = "";
-          const error = view.container?.querySelector(".lb-pad-error");
-          if (error) error.textContent = "";
-        },
-      }),
+      renderAmountField(copy.kicker, pad.initial),
       el("p", { class: "lb-pad-error", role: "alert", text: pad.error }),
-      el("div", { class: "lb-keys" }, keys.map((key) => {
-        if (key === "clear") {
-          return el("button", {
-            type: "button",
-            class: "lb-key lb-key-text",
-            onmousedown: keepFocus,
-            onclick: clearPad,
-          }, "Clear");
-        }
-        if (key === "delete") {
-          return el("button", {
-            type: "button",
-            class: "lb-key lb-key-text",
-            onmousedown: keepFocus,
-            "aria-label": "Delete last digit",
-            onclick: backspace,
-          }, "Delete");
-        }
-        return el("button", {
-          type: "button",
-          class: "lb-key",
-          onmousedown: keepFocus,
-          onclick: () => appendDigit(key),
-        }, key);
-      })),
+      renderKeys(),
       el("div", { class: "lb-pad-actions" }, [
         el("button", { type: "button", class: "lb-btn lb-btn-quiet", onclick: closePad }, "Cancel"),
         el("button", { type: "button", class: "lb-btn lb-btn-primary", onclick: commitPad }, copy.done),

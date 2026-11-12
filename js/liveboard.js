@@ -3,8 +3,10 @@
  *
  * A player's live result is their current stack minus the buy-in they have
  * put in tonight. A re-buy adds the same amount to the buy-in and the stack,
- * so the result stays put until the stack is counted again. Final nets are
- * those results. On a finished game they should sum to 0.
+ * so the result stays put until the stack is counted again. A player who
+ * joins after the start is appended with a stack equal to that buy-in.
+ * Everyone already in the game stays as they are. Final nets are those
+ * results. On a finished game they should sum to 0.
  *
  * Figures are plain whole numbers. Nothing here is a currency amount.
  */
@@ -251,7 +253,10 @@ export function setStack(players, playerId, stack) {
   const next = players.map((player) => {
     if (player.playerId !== playerId) return player;
     found = true;
-    return { ...player, stack };
+    if (player.stack === stack) return player;
+    const updated = { ...player, stack };
+    if (updated.stack !== updated.buyIn) delete updated.late;
+    return updated;
   });
   return found ? next : players;
 }
@@ -266,9 +271,37 @@ export function addRebuy(players, playerId, amount) {
     const stack = player.stack + amount;
     if (!isWholeAmount(buyIn) || !isWholeAmount(stack)) return player;
     changed = true;
-    return { ...player, buyIn, stack };
+    const updated = { ...player, buyIn, stack };
+    delete updated.late;
+    return updated;
   });
   return changed ? next : players;
+}
+
+/**
+ * Append someone who sat down after the game started.
+ * Their stack starts equal to the buy-in, so the net is 0.
+ * A duplicate id or a bad amount is refused, and the list is not copied.
+ */
+export function addPlayer(players, playerId, buyIn) {
+  if (typeof playerId !== "string" || !playerId || !isWholeAmount(buyIn)) return players;
+  if (players.some((player) => player.playerId === playerId)) return players;
+  return [...players, { playerId, buyIn, stack: buyIn, late: true }];
+}
+
+/** A late joiner can come off while the net is still 0 and they have no re-buy. */
+export function canRemovePlayer(player) {
+  return !!player
+    && player.late === true
+    && isWholeAmount(player.buyIn)
+    && player.stack === player.buyIn;
+}
+
+export function removePlayer(players, playerId) {
+  if (typeof playerId !== "string" || !playerId) return players;
+  const player = players.find((item) => item.playerId === playerId);
+  if (!canRemovePlayer(player)) return players;
+  return players.filter((item) => item.playerId !== playerId);
 }
 
 export function withDate(night, date) {
@@ -287,7 +320,9 @@ function nightPlayer(item, phase) {
     return { playerId: item.playerId, buyIn: item.buyIn, stack };
   }
   if (!isWholeAmount(item.buyIn) || !isWholeAmount(item.stack)) return null;
-  return { playerId: item.playerId, buyIn: item.buyIn, stack: item.stack };
+  const player = { playerId: item.playerId, buyIn: item.buyIn, stack: item.stack };
+  if (item.late === true) player.late = true;
+  return player;
 }
 
 export function parseNight(raw) {

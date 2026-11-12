@@ -1208,6 +1208,65 @@ tfoot th, tfoot td {
   font-size: 1.25rem;
 }
 
+.lb-add-wrap {
+  flex: 1 0 100%;
+}
+
+.lb-add {
+  width: 100%;
+  min-height: 64px;
+  font-size: 1.2rem;
+}
+
+.lb-add-wrap .note { margin-top: 8px; }
+
+.lb-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lb-row-actions .lb-rebuy,
+.lb-row-actions .lb-remove {
+  flex: 1 1 8.5rem;
+}
+
+.lb-join-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lb-join {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 104px;
+  padding: 10px 8px;
+  border: 1px solid var(--hair);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  text-align: center;
+}
+
+.lb-join[aria-pressed="true"] {
+  border-color: var(--brass);
+  background: rgba(228, 194, 122, 0.16);
+}
+
+.lb-join-photo { width: 52px; height: 52px; }
+
+.lb-join .lb-name {
+  font-size: 1.05rem;
+  white-space: normal;
+}
+
 .lb-btn {
   min-height: 48px;
   padding: 10px 16px;
@@ -1337,7 +1396,8 @@ tfoot th, tfoot td {
 .lb-person:active,
 .lb-key:active,
 .lb-rebuy:active,
-.lb-buy:active { background: rgba(228, 194, 122, 0.18); }
+.lb-buy:active,
+.lb-join:active { background: rgba(228, 194, 122, 0.18); }
 
 .lb-final h2 { margin-top: 14px; }
 
@@ -1435,6 +1495,8 @@ tfoot th, tfoot td {
   background: #18211c;
   box-shadow: var(--shadow);
 }
+
+.lb-pad-join { width: min(560px, 100%); }
 
 .lb-pad-who {
   display: flex;
@@ -1548,6 +1610,13 @@ body.live-fullscreen .lb-heading h1 { font-size: clamp(2.2rem, 4vw, 3.8rem); }
 
 body.live-fullscreen .lb-key { min-height: 80px; font-size: 2.1rem; }
 
+body.live-fullscreen .lb-add {
+  min-height: 76px;
+  font-size: 1.45rem;
+}
+
+body.live-fullscreen .lb-join { min-height: 116px; }
+
 @media (min-width: 720px) and (min-height: 760px) {
   .lb-shade { align-items: center; }
 }
@@ -1607,6 +1676,17 @@ body.live-fullscreen .lb-key { min-height: 80px; font-size: 2.1rem; }
 
   .lb-key,
   body.live-fullscreen .lb-key { min-height: 40px; font-size: 1.15rem; }
+
+  .lb-add,
+  body.live-fullscreen .lb-add {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  .lb-join,
+  body.live-fullscreen .lb-join { min-height: 72px; padding: 6px; }
+
+  .lb-join-photo { width: 36px; height: 36px; }
 
   .lb-pad { padding: 10px; }
 
