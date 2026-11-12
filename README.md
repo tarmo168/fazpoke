@@ -84,6 +84,8 @@ Open **Live board** in the header. It is meant for a TV during a home game, and 
 
 Pick who is playing tonight. Photos come from the roster. Enter a starting buy-in for each player, then **Start**. The stack starts equal to that buy-in, so everyone opens at 0.
 
+**+ Add player** stays on the board after the game has started, including in full screen. It lists roster players who are not already in, asks for a buy-in, and appends that player with a stack equal to the buy-in. Players already in keep their buy-ins, stacks, and re-buys. If everyone on the roster is already in, the button is off. A late joiner who is still at 0 with no re-buy can be removed after a confirm. End game, Copy results, and Download JSON include whoever is in the game at the end.
+
 The board ranks the table by live result: current stack minus buy-in tonight. Positive results are green with a leading `+`. Negative results are red with a leading `-`. A break-even is `0`. Changing a stack re-sorts the board. The header shows the date, the number of players, and **In play** (the buy-ins added together). A small line shows when the board was last updated.
 
 Tap a player and enter the stack they have in front of them. **+ Re-buy** adds that amount to the buy-in and to the stack, so the result stays put until the next count. **Full screen** enlarges the type for a TV. The same page works in landscape on a phone. **Reset** clears the night after a confirm. A refresh keeps the night on this device.

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  addPlayer,
   addRebuy,
   balanceNote,
+  canRemovePlayer,
   canStart,
   describePlayers,
   dropPick,
@@ -22,6 +24,7 @@ import {
   playerCountLabel,
   rankPlayers,
   rankedField,
+  removePlayer,
   sessionEntry,
   setBuyIn,
   setStack,
@@ -284,6 +287,141 @@ test("a saved night round-trips and bad records are dropped", () => {
   const cleared = emptyNight("2026-11-10");
   assert.deepEqual(withDate(cleared, "2026-11-11"), { ...cleared, date: "2026-11-11" });
   assert.equal(withDate(cleared, "nope"), cleared);
+});
+
+test("a player can join after the game has started", () => {
+  const playing = table.map((player) => ({ ...player }));
+  const snapshot = playing.map((player) => ({ ...player }));
+  const withRebuy = addRebuy(playing, "fah", 200);
+  const fah = withRebuy.find((player) => player.playerId === "fah");
+  const joined = addPlayer(withRebuy, "guy", 300);
+
+  assert.deepEqual(playing, snapshot);
+  assert.equal(joined.find((player) => player.playerId === "fah"), fah);
+  assert.equal(fah.buyIn, 600);
+  assert.equal(fah.stack, 410);
+  for (const player of withRebuy) {
+    assert.equal(joined.includes(player), true);
+  }
+  assert.deepEqual(
+    joined.find((player) => player.playerId === "guy"),
+    { playerId: "guy", buyIn: 300, stack: 300, late: true },
+  );
+  assert.equal(liveResult(300, 300), 0);
+  assert.equal(joined.length, playing.length + 1);
+  assert.equal(totalInPlay(joined), 4200);
+  assert.equal(balanceNote(joined).sum, 0);
+  assert.equal(balanceNote(joined).balanced, true);
+
+  assert.equal(addPlayer(joined, "guy", 100), joined);
+  assert.equal(addPlayer(joined, "dom", 900), joined);
+  assert.equal(addPlayer(joined, "", 300), joined);
+  assert.equal(addPlayer(joined, "na", -1), joined);
+  assert.equal(addPlayer(joined, "na", 1.5), joined);
+  assert.equal(joined.find((player) => player.playerId === "dom").buyIn, 400);
+  assert.equal(joined.find((player) => player.playerId === "dom").stack, 1310);
+  assert.equal(fah.buyIn, 600);
+  assert.equal(joined.length, playing.length + 1);
+
+  const roster = [
+    { id: "dom", name: "Dom" },
+    { id: "will", name: "Will" },
+    { id: "taam", name: "Taam" },
+    { id: "fah", name: "Fah" },
+    { id: "bank", name: "Bank" },
+    { id: "tip", name: "Tip" },
+    { id: "zack", name: "Zack" },
+    { id: "guy", name: "Guy", photo: "assets/players/guy.png" },
+  ];
+  const described = describePlayers(joined, roster);
+  assert.equal(described.find((player) => player.playerId === "guy").name, "Guy");
+  assert.deepEqual(
+    rankPlayers(described).map((player) => player.name),
+    ["Dom", "Will", "Guy", "Taam", "Fah", "Bank", "Tip", "Zack"],
+  );
+
+  const done = finalResults(described);
+  assert.equal(done.balanced, true);
+  assert.equal(done.netSum, 0);
+  assert.deepEqual(
+    done.rows.find((row) => row.playerId === "guy"),
+    { playerId: "guy", name: "Guy", buyIn: 300, stack: 300, net: 0, rank: 3 },
+  );
+  const lines = formatResultsText(done.rows).split("\n");
+  assert.equal(lines.includes("Guy 300 0"), true);
+  assert.equal(lines.includes("Dom 400 +910"), true);
+  assert.equal(lines.includes("Fah 600 -190"), true);
+  assert.equal(lines.length, joined.length);
+
+  const entry = sessionEntry(described, ledger);
+  assert.deepEqual(
+    entry.entries.find((row) => row.playerId === "guy"),
+    { playerId: "guy", buyIn: 300, net: 0 },
+  );
+  assert.equal(entry.entries.reduce((sum, row) => sum + row.net, 0), 0);
+  const saved = JSON.parse(formatSessionJson(entry));
+  assert.deepEqual(
+    saved.entries.find((row) => row.playerId === "guy"),
+    { playerId: "guy", buyIn: 300, net: 0 },
+  );
+
+  const off = addPlayer(setStack(playing, "dom", 1360), "na", 0);
+  assert.equal(balanceNote(off).sum, 50);
+  assert.equal(off.find((player) => player.playerId === "na").stack, 0);
+  assert.equal(off.find((player) => player.playerId === "dom").stack, 1360);
+});
+
+test("a late joiner can be removed only while they are still at zero", () => {
+  const joined = addPlayer(
+    [{ playerId: "dom", buyIn: 400, stack: 250 }],
+    "guy",
+    300,
+  );
+  assert.equal(canRemovePlayer(joined[0]), false);
+  assert.equal(removePlayer(joined, "dom"), joined);
+  assert.equal(canRemovePlayer(joined[1]), true);
+
+  const removed = removePlayer(joined, "guy");
+  assert.deepEqual(removed, [{ playerId: "dom", buyIn: 400, stack: 250 }]);
+  assert.equal(joined[1].late, true);
+
+  const rebought = addRebuy(joined, "guy", 100);
+  assert.equal(rebought[1].buyIn, 400);
+  assert.equal(rebought[1].stack, 400);
+  assert.equal(rebought[1].late, undefined);
+  assert.equal(canRemovePlayer(rebought[1]), false);
+  assert.equal(removePlayer(rebought, "guy"), rebought);
+
+  const counted = setStack(joined, "guy", 200);
+  assert.equal(canRemovePlayer(counted[1]), false);
+  const back = setStack(counted, "guy", 300);
+  assert.equal(back[1].stack, 300);
+  assert.equal(canRemovePlayer(back[1]), false);
+
+  const night = parseNight({
+    date: "2026-11-12",
+    phase: "play",
+    updatedAt: 1,
+    players: [
+      { playerId: "dom", buyIn: 400, stack: 250 },
+      { playerId: "guy", buyIn: 300, stack: 300, late: true, extra: true },
+    ],
+  });
+  assert.deepEqual(night.players[1], {
+    playerId: "guy",
+    buyIn: 300,
+    stack: 300,
+    late: true,
+  });
+  assert.equal(canRemovePlayer(night.players[1]), true);
+
+  const unmarked = parseNight({
+    date: "2026-11-12",
+    phase: "play",
+    updatedAt: 1,
+    players: [{ playerId: "guy", buyIn: 300, stack: 300, late: false }],
+  });
+  assert.equal("late" in unmarked.players[0], false);
 });
 
 test("the date and the clock are local", () => {
