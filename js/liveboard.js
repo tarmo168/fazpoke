@@ -3,8 +3,10 @@
  *
  * A player's live result is their current stack minus the buy-in they have
  * put in tonight. A re-buy adds the same amount to the buy-in and the stack,
- * so the result stays put until the stack is counted again. A player who
- * joins after the start is appended with a stack equal to that buy-in.
+ * so the result stays put until the stack is counted again. Removing buy-in
+ * subtracts that same amount from both, so the result stays put as well.
+ * A player who joins after the start is appended with a stack equal to that
+ * buy-in.
  * Everyone already in the game stays as they are. Final nets are those
  * results. On a finished game they should sum to 0.
  *
@@ -274,6 +276,27 @@ export function addRebuy(players, playerId, amount) {
     const updated = { ...player, buyIn, stack };
     delete updated.late;
     return updated;
+  });
+  return changed ? next : players;
+}
+
+/**
+ * Take an amount off a player's buy-in during a running game.
+ * The same amount comes off the stack, so the result stays put.
+ * A missing player, a bad amount, or a buy-in or stack below zero
+ * is refused, and the list is not copied.
+ */
+export function removeBuyIn(players, playerId, amount) {
+  if (typeof playerId !== "string" || !playerId || !isWholeAmount(amount) || amount <= 0) return players;
+  let changed = false;
+  const next = players.map((player) => {
+    if (player.playerId !== playerId) return player;
+    if (!isWholeAmount(player.buyIn) || !isWholeAmount(player.stack)) return player;
+    const buyIn = player.buyIn - amount;
+    const stack = player.stack - amount;
+    if (!isWholeAmount(buyIn) || !isWholeAmount(stack)) return player;
+    changed = true;
+    return { ...player, buyIn, stack };
   });
   return changed ? next : players;
 }

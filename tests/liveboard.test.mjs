@@ -24,6 +24,7 @@ import {
   playerCountLabel,
   rankPlayers,
   rankedField,
+  removeBuyIn,
   removePlayer,
   sessionEntry,
   setBuyIn,
@@ -113,6 +114,103 @@ test("a re-buy adds to the buy-in and the stack and leaves the result", () => {
   assert.equal(addRebuy(table, "fah", 0), table);
   assert.equal(addRebuy(table, "missing", 100), table);
   assert.equal(addRebuy(table, "zack", 99999999), table);
+});
+
+test("removing buy-in lowers the buy-in and the stack and leaves the result", () => {
+  const before = table.map((player) => ({ ...player }));
+  const next = removeBuyIn(table, "fah", 200);
+  assert.equal(table.find((player) => player.playerId === "fah").stack, 210);
+  assert.equal(table.find((player) => player.playerId === "fah").buyIn, 400);
+  const fah = next.find((player) => player.playerId === "fah");
+  assert.equal(fah.buyIn, 200);
+  assert.equal(fah.stack, 10);
+  assert.equal(liveResult(fah.stack, fah.buyIn), -190);
+  assert.equal(balanceNote(next).sum, balanceNote(before).sum);
+  assert.equal(balanceNote(next).balanced, true);
+  assert.equal(totalInPlay(next), 3500);
+  for (const player of table) {
+    if (player.playerId === "fah") continue;
+    assert.equal(next.find((item) => item.playerId === player.playerId), player);
+  }
+
+  const cleared = removeBuyIn(table, "dom", 400);
+  const dom = cleared.find((player) => player.playerId === "dom");
+  assert.equal(dom.buyIn, 0);
+  assert.equal(dom.stack, 910);
+  assert.equal(liveResult(dom.stack, dom.buyIn), 910);
+  assert.equal("late" in dom, false);
+
+  const toZero = removeBuyIn(table, "fah", 210);
+  assert.equal(toZero.find((player) => player.playerId === "fah").buyIn, 190);
+  assert.equal(toZero.find((player) => player.playerId === "fah").stack, 0);
+  assert.equal(liveResult(0, 190), -190);
+
+  assert.equal(removeBuyIn(table, "fah", 211), table);
+  assert.equal(removeBuyIn(table, "fah", 500), table);
+  assert.equal(removeBuyIn(table, "dom", 401), table);
+  assert.equal(removeBuyIn(table, "bank", 1), table);
+  assert.equal(removeBuyIn(table, "fah", 0), table);
+  assert.equal(removeBuyIn(table, "missing", 100), table);
+  assert.equal(removeBuyIn(table, "", 100), table);
+  assert.equal(removeBuyIn(table, "fah", -200), table);
+  assert.equal(removeBuyIn(table, "fah", 1.5), table);
+  assert.equal(removeBuyIn(table, "fah", null), table);
+
+  const undone = removeBuyIn(addRebuy(table, "fah", 200), "fah", 200);
+  const restored = undone.find((player) => player.playerId === "fah");
+  assert.equal(restored.buyIn, 400);
+  assert.equal(restored.stack, 210);
+  assert.equal(liveResult(restored.stack, restored.buyIn), -190);
+
+  const done = finalResults(next);
+  assert.equal(done.balanced, true);
+  assert.equal(done.netSum, 0);
+  assert.deepEqual(
+    done.rows.find((row) => row.playerId === "fah"),
+    { playerId: "fah", name: "Fah", buyIn: 200, stack: 10, net: -190, rank: 4 },
+  );
+  const text = formatResultsText(done.rows);
+  assert.equal(text.split("\n").includes("Fah 200 -190"), true);
+  assert.equal(text.split("\n").includes("Dom 400 +910"), true);
+  assert.equal(/[$€£¥฿₱₩₽₹]/.test(text), false);
+
+  const entry = sessionEntry(next, ledger);
+  assert.deepEqual(
+    entry.entries.find((row) => row.playerId === "fah"),
+    { playerId: "fah", buyIn: 200, net: -190 },
+  );
+  assert.equal(entry.entries.reduce((sum, row) => sum + row.net, 0), 0);
+  const json = formatSessionJson(entry);
+  assert.match(json, /\{ "playerId": "fah", "buyIn": 200, "net": -190 \}/);
+  assert.equal(/[$€£¥฿]/.test(json), false);
+
+  const saved = {
+    date: "2026-11-10",
+    phase: "play",
+    updatedAt: 1762812240000,
+    players: next.map((player) => ({
+      playerId: player.playerId,
+      buyIn: player.buyIn,
+      stack: player.stack,
+    })),
+  };
+  assert.deepEqual(parseNight(JSON.stringify(saved)), saved);
+
+  const older = parseNight({
+    date: "2026-11-10",
+    phase: "play",
+    updatedAt: 1762812240000,
+    players: [{ playerId: "dom", buyIn: 400, stack: 1310 }],
+  });
+  assert.deepEqual(older.players, [{ playerId: "dom", buyIn: 400, stack: 1310 }]);
+
+  const joined = addPlayer([{ playerId: "dom", buyIn: 400, stack: 250 }], "guy", 300);
+  const trimmed = removeBuyIn(joined, "guy", 100);
+  assert.deepEqual(trimmed[1], { playerId: "guy", buyIn: 200, stack: 200, late: true });
+  assert.equal(canRemovePlayer(trimmed[1]), true);
+  assert.equal(liveResult(trimmed[1].stack, trimmed[1].buyIn), 0);
+  assert.equal(joined[1].buyIn, 300);
+  assert.equal(removeBuyIn(joined, "guy", 301), joined);
 });
 
 test("setting the stack replaces it and moves the result", () => {

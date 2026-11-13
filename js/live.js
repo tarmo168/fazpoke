@@ -17,6 +17,7 @@ import {
   parseNight,
   parseWhole,
   rankedField,
+  removeBuyIn,
   removePlayer,
   sessionEntry,
   setBuyIn,
@@ -57,6 +58,11 @@ const SAVE_KEY = "fazpoke.liveboard.saveKey";
 const PAD_COPY = {
   stack: { kicker: "Current stack", done: "Set stack" },
   rebuy: { kicker: "Re-buy", note: "Adds to the buy-in and the stack.", done: "Add re-buy" },
+  fix: {
+    kicker: "Remove buy-in",
+    note: "Subtracts this amount from the buy-in and the stack. The result stays the same.",
+    done: "Remove buy-in",
+  },
   buyin: { kicker: "Starting buy-in", done: "Set buy-in" },
 };
 
@@ -263,9 +269,11 @@ function closePad() {
     ? `main-${playerId}`
     : mode === "rebuy"
       ? `rebuy-${playerId}`
-      : mode === "join"
-        ? "add-player"
-        : `buy-${playerId}`;
+      : mode === "fix"
+        ? `fix-${playerId}`
+        : mode === "join"
+          ? "add-player"
+          : `buy-${playerId}`;
   view.pad = null;
   paint();
 }
@@ -369,6 +377,17 @@ function commitPad() {
       return;
     }
     view.night = { ...view.night, players, updatedAt: Date.now() };
+  } else if (mode === "fix") {
+    if (amount == null || amount <= 0) {
+      failPad(input, "Enter the amount to remove.");
+      return;
+    }
+    const players = removeBuyIn(view.night.players, playerId, amount);
+    if (players === view.night.players) {
+      failPad(input, fixRefusal(pickOf(playerId), amount));
+      return;
+    }
+    view.night = { ...view.night, players, updatedAt: Date.now() };
   } else if (mode === "stack") {
     if (amount == null) {
       failPad(input, "Enter the stack.");
@@ -386,11 +405,26 @@ function commitPad() {
   } else {
     view.night = { ...view.night, players: setBuyIn(view.night.players, playerId, amount) };
   }
-  view.focus = mode === "stack" ? `main-${playerId}` : mode === "rebuy" ? `rebuy-${playerId}` : `buy-${playerId}`;
+  view.focus = mode === "stack"
+    ? `main-${playerId}`
+    : mode === "rebuy"
+      ? `rebuy-${playerId}`
+      : mode === "fix"
+        ? `fix-${playerId}`
+        : `buy-${playerId}`;
   view.pad = null;
   view.message = "";
   persist();
   paint();
+}
+
+function fixRefusal(player, amount) {
+  const buyShort = !!player && typeof player.buyIn === "number" && amount > player.buyIn;
+  const stackShort = !!player && typeof player.stack === "number" && amount > player.stack;
+  if (buyShort && stackShort) return "That would make the buy-in and the stack negative.";
+  if (buyShort) return "That would make the buy-in negative.";
+  if (stackShort) return "That would make the stack negative.";
+  return "That would make the buy-in or the stack negative.";
 }
 
 function togglePlayer(playerId) {
@@ -897,7 +931,7 @@ function renderBoard() {
   return el("section", { class: "lb-live" }, [
     el("p", {
       class: "lb-hint",
-      text: "Tap a player to set the stack. Re-buy adds to the buy-in and the stack.",
+      text: "Tap a player to set the stack. Re-buy adds to the buy-in and the stack. Fix buy-in removes an amount from both.",
     }),
     ranked.length
       ? el("ol", { class: "lb-board", "aria-label": "Standings" }, ranked.map((player) => {
@@ -947,6 +981,17 @@ function renderBoard() {
                 paint();
               },
             }, "+ Re-buy"),
+            el("button", {
+              type: "button",
+              class: "lb-fix",
+              dataset: { focus: `fix-${player.playerId}` },
+              "aria-label": `Fix buy-in for ${player.name}`,
+              onclick: () => {
+                view.message = "";
+                openPad("fix", player.playerId);
+                paint();
+              },
+            }, "Fix buy-in"),
             canRemovePlayer(player)
               ? el("button", {
                 type: "button",
@@ -1100,7 +1145,7 @@ function pinForm(label) {
 function padAside(player) {
   if (!view.pad || !player) return "";
   if (view.pad.mode === "stack" && player.stack != null) return `Was ${formatAmount(player.stack)}`;
-  if (view.pad.mode === "rebuy" && player.buyIn != null && player.stack != null) {
+  if ((view.pad.mode === "rebuy" || view.pad.mode === "fix") && player.buyIn != null && player.stack != null) {
     return `Buy-in ${formatAmount(player.buyIn)} · Stack ${formatAmount(player.stack)}`;
   }
   if (view.pad.mode === "buyin" && player.buyIn != null) return `Current buy-in ${formatAmount(player.buyIn)}`;
