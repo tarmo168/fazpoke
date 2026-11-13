@@ -72,7 +72,7 @@ Replace `buyIn` and `net` with the real figures before you commit. Leave anyone 
 Check the sheet before pushing:
 
 ```bash
-node --test tests/ledger.test.mjs tests/sessions.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs tests/share.test.mjs
+node --test tests/ledger.test.mjs tests/sessions.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs tests/share.test.mjs tests/avatar.test.mjs
 ```
 
 Recorded nets on a finished session should add up to `0`. The test locks Session 1 at buy-in `3,700` and net `0`.
@@ -123,7 +123,7 @@ The script draws an SVG and renders that to the PNG. It does not read `data/sess
 
 ## Add a player
 
-Append one object to `data/players.json` and add a square photo at the path you name.
+Append one object to `data/players.json`. Add a square photo at the path you name when you have one. Leave `photo` out when there is no picture yet. The leaderboard, player page, session sheet, chart legend, live roster, add-player picker, and full-screen board draw a circle with the player's initial.
 
 ```json
 { "id": "new-id", "name": "Display Name", "photo": "assets/players/new-id.png" }

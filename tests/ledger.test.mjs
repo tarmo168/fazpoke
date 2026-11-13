@@ -11,7 +11,7 @@ const sessions = JSON.parse(readFileSync(new URL("../data/sessions.json", import
 
 test("roster and session 1 are the recorded sheet", () => {
   assert.deepEqual(players.map((player) => player.name), [
-    "Taam", "Bank", "Chase", "Fah", "JJ", "Dom", "Na", "Tip", "Will", "Zack", "Guy", "Golf", "Eye", "James", "Wilson", "Him",
+    "Taam", "Bank", "Chase", "Fah", "JJ", "Dom", "Na", "Tip", "Will", "Zack", "Guy", "Golf", "Eye", "James", "Wilson", "Him", "Tae",
   ]);
   assert.equal(sessions.length, 1);
   assert.equal(sessions[0].label, "Session 1");
@@ -44,7 +44,7 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.equal(taam.points[1].value, 0);
   assert.equal(taam.points[1].delta, 0);
 
-  assert.deepEqual(model.unrecorded.map((player) => player.id), ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson", "him"]);
+  assert.deepEqual(model.unrecorded.map((player) => player.id), ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson", "him", "tae"]);
   const guy = model.unrecorded.find((player) => player.id === "guy");
   assert.equal(guy.name, "Guy");
   assert.equal(guy.photo, "assets/players/guy.png");
@@ -98,6 +98,15 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.deepEqual(him.history, []);
   assert.equal(sessions.some((session) => (
     (session.entries || []).some((entry) => entry.playerId === "him")
+  )), false);
+  const tae = model.unrecorded.find((player) => player.id === "tae");
+  assert.equal(tae.name, "Tae");
+  assert.equal(Object.hasOwn(tae, "photo"), false);
+  assert.equal(tae.recorded, false);
+  assert.equal(tae.net, null);
+  assert.deepEqual(tae.history, []);
+  assert.equal(sessions.some((session) => (
+    (session.entries || []).some((entry) => entry.playerId === "tae")
   )), false);
   assert.equal(model.unrecorded.every((player) => player.net === null), true);
   assert.equal(model.unrecorded.every((player) => player.points === null), true);
@@ -252,7 +261,10 @@ test("the site copy does not name a currency", () => {
 });
 
 test("every player photo exists", () => {
+  const missing = players.filter((player) => !player.photo).map((player) => player.id);
+  assert.deepEqual(missing, ["tae"]);
   for (const player of players) {
+    if (!player.photo) continue;
     const file = new URL(`../${player.photo}`, import.meta.url);
     const bytes = readFileSync(file);
     assert.equal(bytes.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");

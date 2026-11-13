@@ -78,5 +78,9 @@
     "id": "him",
     "name": "Him",
     "photo": "assets/players/him.png"
+  },
+  {
+    "id": "tae",
+    "name": "Tae"
   }
 ]

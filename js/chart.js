@@ -1,4 +1,4 @@
-import { el } from "./dom.js";
+import { avatar, el } from "./dom.js";
 import { formatSigned, signedClass } from "./format.js";
 
 const PALETTE = [
@@ -250,7 +250,7 @@ function draw(host) {
       "aria-pressed": pressed ? "true" : "false",
       onclick: () => spec.onToggle?.(item.id),
     }, [
-      el("img", { src: item.photo, alt: "", width: "76", height: "76" }),
+      avatar({ name: item.name, photo: item.photo }),
       el("span", { class: "swatch", style: { background: item.color }, "aria-hidden": "true" }),
       el("span", { class: "legend-name", text: item.name }),
       el("span", { class: `num legend-net ${signedClass(latest)}`, text: formatSigned(latest) }),
