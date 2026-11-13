@@ -60,6 +60,11 @@
     "photo": "assets/players/golf.png"
   },
   {
+    "id": "eye",
+    "name": "Eye",
+    "photo": "assets/players/eye.png"
+  },
+  {
     "id": "james",
     "name": "James",
     "photo": "assets/players/james.png"
