@@ -1,6 +1,15 @@
 import { avatar, el } from "./dom.js";
 import { formatAmount, formatSigned, signedClass } from "./format.js";
-import { awardBadges, buildModel, cumulativeNets, findPlayer, rankMoves, sortStandings } from "./stats.js";
+import {
+  awardBadges,
+  boardRowText,
+  buildModel,
+  cumulativeNets,
+  findPlayer,
+  leaderboardOrder,
+  rankMoves,
+  sortStandings,
+} from "./stats.js";
 import { colorMap, mountChart, seriesFromPlayer } from "./chart.js";
 import { mountLive, unmountLive, updateLiveSessions } from "./live.js";
 import { SHEET_API_URL } from "./config.js";
@@ -229,7 +238,7 @@ function summary(model) {
 }
 
 function board(model, enter) {
-  const ranked = sortStandings(model.standings, state.sortKey, state.sortDir);
+  const ordered = leaderboardOrder(model.standings, model.unrecorded, state.sortKey, state.sortDir);
   const sortLabel = SORTS.find((item) => item.key === state.sortKey)?.label || "Total earnings";
   const direction = state.sortDir === "desc" ? "high to low" : "low to high";
   const sessionsLabel = (count) => (count === 1 ? "1 session" : `${count} sessions`);
@@ -245,25 +254,49 @@ function board(model, enter) {
     el("span", { class: "col-net", text: "Total earnings" }),
   ]);
 
-  const rows = ranked.map((player, index) => {
+  const rows = ordered.map((player, index) => {
+    const text = boardRowText(player);
+    const delay = motion ? { "--row-delay": `${index * ROW_STAGGER_MS}ms` } : undefined;
+    if (!text.ranked) {
+      return el("a", {
+        class: `row${motion ? " row-in" : ""}`,
+        href: `#/player/${player.id}`,
+        style: delay,
+        "aria-label": `${player.name}. No rank. 0 sessions. No recorded total.`,
+      }, [
+        el("span", { class: "rank" }, [
+          el("span", { class: "rank-num num rank-blank", text: text.rank }),
+        ]),
+        avatar(player),
+        el("span", { class: "who" }, [
+          el("span", { class: "name", text: player.name }),
+        ]),
+        el("span", { class: "col-sessions num", text: text.sessions }),
+        el("span", { class: "col-net" }, [
+          el("span", { class: "earnings num pending", text: text.earnings }),
+        ]),
+      ]);
+    }
+
+    const place = index + 1;
     const move = movementView(moves.get(player.id));
     const playerBadges = badges.get(player.id) || [];
     const badgePhrase = playerBadges.map((badge) => badge.label).join(", ");
     const label = [
-      `${index + 1}. ${player.name}`,
+      `${place}. ${player.name}`,
       move?.phrase,
       badgePhrase,
       sessionsLabel(player.sessionsPlayed),
       `Total earnings ${formatSigned(player.net)}`,
     ].filter(Boolean).join(". ");
     return el("a", {
-      class: `row${index === 0 ? " lead" : ""}${motion ? " row-in" : ""}`,
+      class: `row${place === 1 ? " lead" : ""}${motion ? " row-in" : ""}`,
       href: `#/player/${player.id}`,
-      style: motion ? { "--row-delay": `${index * ROW_STAGGER_MS}ms` } : undefined,
+      style: delay,
       "aria-label": `${label}.`,
     }, [
       el("span", { class: "rank" }, [
-        el("span", { class: "rank-num num", text: String(index + 1) }),
+        el("span", { class: "rank-num num", text: String(place) }),
         move ? el("span", { class: `move move-${move.tone}`, title: move.title, text: move.text }) : null,
       ]),
       avatar(player),
@@ -271,34 +304,15 @@ function board(model, enter) {
         el("span", { class: "name", text: player.name }),
         badgeNodes(playerBadges),
       ]),
-      el("span", { class: "col-sessions num", text: String(player.sessionsPlayed) }),
+      el("span", { class: "col-sessions num", text: text.sessions }),
       el("span", { class: "col-net" }, [
-        sparkline(cumulativeNets(player)),
+        text.sparkline ? sparkline(cumulativeNets(player)) : null,
         el("span", {
           class: `earnings num ${signedClass(player.net)}`,
           dataset: motion ? { earnings: String(player.net) } : undefined,
           text: motion ? formatCount(player.net, 0) : formatSigned(player.net),
         }),
       ]),
-    ]);
-  });
-
-  const unrecorded = model.unrecorded.map((player) => {
-    const meta = player.history.length
-      ? player.history.map((item) => item.label).join(", ")
-      : "No session on record";
-    return el("a", {
-      class: "row quiet",
-      href: `#/player/${player.id}`,
-      "aria-label": `${player.name}. Unrecorded. ${meta}.`,
-    }, [
-      el("span", { class: "rank", "aria-hidden": "true" }),
-      avatar(player, "dim"),
-      el("span", { class: "who" }, [
-        el("span", { class: "name", text: player.name }),
-        el("span", { class: "row-meta", text: meta }),
-      ]),
-      el("span", { class: "pill", text: "Unrecorded" }),
     ]);
   });
 
@@ -317,17 +331,11 @@ function board(model, enter) {
     ]),
     el("p", {
       class: "note",
-      text: `Sorted by ${sortLabel.toLowerCase()}, ${direction}. Equal values fall back to total earnings, then name.`,
+      text: `Sorted by ${sortLabel.toLowerCase()}, ${direction}. Equal values fall back to total earnings, then name. Players with no recorded result stay at the bottom.`,
     }),
-    ranked.length
+    ordered.length
       ? el("div", { class: "rows standings" }, [head, ...rows])
       : el("p", { class: "note", text: "No recorded results yet." }),
-    el("h2", { class: "subhead", text: "Unrecorded" }),
-    el("p", {
-      class: "note",
-      text: "Still on the roster. Left out of the ranking and the charts until a result is recorded.",
-    }),
-    el("div", { class: "rows" }, unrecorded),
   ]);
 }
 
@@ -512,7 +520,7 @@ function profile(model, colors) {
         class: "note",
         text: player.recorded
           ? "Cumulative net from recorded sessions."
-          : "No recorded result, so this player is off the board and off the charts.",
+          : "No recorded result yet. Listed on the board without a rank, and left off the charts.",
       }),
     ]),
   ]));
@@ -651,11 +659,21 @@ async function sessionsWithSheet(fileSessions) {
   }
 }
 
+function ledgerDataUrl(path) {
+  const url = new URL(path, import.meta.url);
+  url.searchParams.set("v", String(Date.now()));
+  return url;
+}
+
 async function load() {
   try {
-    const playersUrl = new URL("../data/players.json", import.meta.url);
-    const sessionsUrl = new URL("../data/sessions.json", import.meta.url);
-    const [playersRes, sessionsRes] = await Promise.all([fetch(playersUrl), fetch(sessionsUrl)]);
+    // Pages sends Cache-Control: max-age=600. Skip that cache so a refresh
+    // shows the latest roster and sessions, including on the Live board.
+    const fresh = { cache: "no-store" };
+    const [playersRes, sessionsRes] = await Promise.all([
+      fetch(ledgerDataUrl("../data/players.json"), fresh),
+      fetch(ledgerDataUrl("../data/sessions.json"), fresh),
+    ]);
     if (!playersRes.ok || !sessionsRes.ok) throw new Error("missing");
     const players = await playersRes.json();
     const sessions = await sessionsRes.json();

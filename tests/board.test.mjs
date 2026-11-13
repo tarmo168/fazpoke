@@ -3,11 +3,17 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   awardBadges,
+  BLANK_EARNINGS,
+  boardRowText,
   buildModel,
+  cumulativeNets,
+  leaderboardOrder,
   mostConsistent,
   rankMoves,
+  sortStandings,
   standardDeviation,
   streak,
+  UNRANKED_MARK,
 } from "../js/stats.js";
 
 const players = JSON.parse(readFileSync(new URL("../data/players.json", import.meta.url), "utf8"));
@@ -21,6 +27,80 @@ function movesFrom(roster, ledger) {
 function ids(badges, id) {
   return (badges.get(id) || []).map((badge) => badge.id);
 }
+
+test("players with no recorded result follow every ranked row", () => {
+  const model = buildModel(players, sessions);
+  const rankedIds = sortStandings(model.standings, "net", "desc").map((player) => player.id);
+  const blankIds = model.unrecorded.map((player) => player.id);
+  assert.deepEqual(blankIds, ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson"]);
+
+  const rows = leaderboardOrder(model.standings, model.unrecorded, "net", "desc");
+  assert.deepEqual(rows.map((player) => player.id), [...rankedIds, ...blankIds]);
+
+  const blanks = rows.filter((player) => player.recorded !== true);
+  assert.equal(blanks.length, blankIds.length);
+  for (const player of blanks) {
+    const text = boardRowText(player);
+    assert.equal(text.ranked, false);
+    assert.equal(text.rank, UNRANKED_MARK);
+    assert.equal(text.rank, "–");
+    assert.equal(/\d/.test(text.rank), false);
+    assert.equal(text.sessions, "0");
+    assert.equal(player.sessionsPlayed, 0);
+    assert.equal(text.earnings, BLANK_EARNINGS);
+    assert.equal(text.earnings, "—");
+    assert.equal(text.sparkline, false);
+    assert.equal(player.net, null);
+    assert.deepEqual(cumulativeNets(player), []);
+    assert.equal(player.photo, `assets/players/${player.id}.png`);
+    assert.equal(/[$€£¥฿₱₩₽₹]/.test(`${text.rank}${text.earnings}`), false);
+  }
+
+  const badges = awardBadges(rows);
+  for (const player of blanks) {
+    assert.equal(badges.has(player.id), false);
+    assert.equal((badges.get(player.id) || []).some((badge) => badge.id === "fish"), false);
+  }
+  assert.equal(badges.get("zack").some((badge) => badge.id === "fish"), true);
+  for (const id of rankedIds) assert.equal(boardRowText(model.standings.find((player) => player.id === id)).sparkline, true);
+
+  const bySessions = leaderboardOrder(model.standings, model.unrecorded, "sessionsPlayed", "asc");
+  assert.equal(bySessions.findIndex((player) => player.recorded !== true), model.standings.length);
+  assert.deepEqual(bySessions.slice(model.standings.length).map((player) => player.id), blankIds);
+
+  const mixed = buildModel(
+    [
+      { id: "low", name: "Low" },
+      { id: "blank", name: "Blank" },
+      { id: "high", name: "High" },
+      { id: "new", name: "New" },
+    ],
+    [{
+      id: "s1",
+      label: "Session 1",
+      entries: [
+        { playerId: "low", buyIn: 1, net: -5 },
+        { playerId: "blank", buyIn: 1, net: null },
+        { playerId: "high", buyIn: 1, net: 5 },
+      ],
+    }],
+  );
+  assert.deepEqual(
+    leaderboardOrder(mixed.standings, mixed.unrecorded, "net", "asc").map((player) => player.id),
+    ["low", "high", "blank", "new"],
+  );
+  assert.deepEqual(
+    leaderboardOrder(mixed.standings, mixed.unrecorded, "sessionsPlayed", "asc").map((player) => player.id),
+    ["high", "low", "blank", "new"],
+  );
+  assert.equal(leaderboardOrder(mixed.standings, mixed.unrecorded, "net", "desc").at(-1).id, "new");
+  const mixedBadges = awardBadges(leaderboardOrder(mixed.standings, mixed.unrecorded, "net", "desc"));
+  assert.equal(mixedBadges.has("blank"), false);
+  assert.equal(mixedBadges.has("new"), false);
+  assert.equal(mixedBadges.get("low").some((badge) => badge.id === "fish"), true);
+  assert.equal(boardRowText(mixed.unrecorded[0]).sessions, "0");
+  assert.equal(boardRowText(null).ranked, false);
+});
 
 test("one session marks every recorded player new and leaves blanks alone", () => {
   const direct = rankMoves([

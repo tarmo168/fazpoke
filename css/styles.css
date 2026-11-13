@@ -318,8 +318,6 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   gap: 12px;
 }
 
-.subhead { margin-top: 22px; font-size: 1.35rem; }
-
 .note {
   margin: 8px 0 0;
   color: var(--muted);
@@ -464,6 +462,8 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   line-height: 1;
 }
 
+.rank-blank { color: var(--faint); }
+
 .move {
   font-family: Outfit, "Avenir Next", "Segoe UI", sans-serif;
   font-size: 0.62rem;
@@ -569,8 +569,6 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   letter-spacing: -0.02em;
 }
 
-.row-meta { color: var(--muted); font-size: 0.86rem; }
-
 .standings .row:not(.row-head) .col-sessions {
   color: var(--muted);
   font-size: 0.86rem;
@@ -607,17 +605,6 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   place-items: center;
   font-family: Fraunces, Palatino, Georgia, serif;
   color: var(--brass-2);
-}
-
-.pill {
-  justify-self: end;
-  color: var(--muted);
-  border: 1px solid rgba(167, 178, 171, 0.4);
-  border-radius: 999px;
-  padding: 5px 9px;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -987,8 +974,6 @@ tfoot th, tfoot td {
   .standings .avatar { width: 48px; height: 48px; }
   .spark { width: 64px; height: 20px; }
   .standings .row-head .col-net { white-space: nowrap; }
-  .row.quiet { grid-template-columns: 2rem 48px minmax(0, 1fr) auto; }
-  .row-meta { display: none; }
   .panel { padding: 22px 22px 18px; }
 }
 

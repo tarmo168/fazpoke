@@ -164,6 +164,43 @@ export function sortStandings(rows, key, dir) {
   });
 }
 
+/** Shown in the rank column for a player with no recorded result. */
+export const UNRANKED_MARK = "–";
+
+/** Shown in place of total earnings for a player with no recorded result. */
+export const BLANK_EARNINGS = "—";
+
+/**
+ * Ranked players in the requested order, then players with no recorded
+ * result in roster order. The second group stays last for every sort,
+ * including sessions low to high, where a session count of 0 would
+ * otherwise come first.
+ */
+export function leaderboardOrder(standings, unrecorded, key, dir) {
+  return [
+    ...sortStandings(standings, key, dir),
+    ...(Array.isArray(unrecorded) ? unrecorded : []),
+  ];
+}
+
+/** Text for one leaderboard row. Unranked rows have no sparkline. */
+export function boardRowText(player) {
+  if (!player || player.recorded !== true) {
+    return {
+      ranked: false,
+      rank: UNRANKED_MARK,
+      sessions: "0",
+      earnings: BLANK_EARNINGS,
+      sparkline: false,
+    };
+  }
+  return {
+    ranked: true,
+    sessions: String(player.sessionsPlayed),
+    sparkline: true,
+  };
+}
+
 export function findPlayer(model, id) {
   return (
     model.standings.find((player) => player.id === id) ||

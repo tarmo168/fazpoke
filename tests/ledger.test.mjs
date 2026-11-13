@@ -11,7 +11,7 @@ const sessions = JSON.parse(readFileSync(new URL("../data/sessions.json", import
 
 test("roster and session 1 are the recorded sheet", () => {
   assert.deepEqual(players.map((player) => player.name), [
-    "Taam", "Bank", "Chase", "Fah", "JJ", "Dom", "Na", "Tip", "Will", "Zack", "Guy", "Golf", "Eye", "James",
+    "Taam", "Bank", "Chase", "Fah", "JJ", "Dom", "Na", "Tip", "Will", "Zack", "Guy", "Golf", "Eye", "James", "Wilson",
   ]);
   assert.equal(sessions.length, 1);
   assert.equal(sessions[0].label, "Session 1");
@@ -44,7 +44,7 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.equal(taam.points[1].value, 0);
   assert.equal(taam.points[1].delta, 0);
 
-  assert.deepEqual(model.unrecorded.map((player) => player.id), ["chase", "jj", "na", "guy", "golf", "eye", "james"]);
+  assert.deepEqual(model.unrecorded.map((player) => player.id), ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson"]);
   const guy = model.unrecorded.find((player) => player.id === "guy");
   assert.equal(guy.name, "Guy");
   assert.equal(guy.photo, "assets/players/guy.png");
@@ -80,6 +80,15 @@ test("session 1 totals and the break-even stay exact", () => {
   assert.deepEqual(james.history, []);
   assert.equal(sessions.some((session) => (
     (session.entries || []).some((entry) => entry.playerId === "james")
+  )), false);
+  const wilson = model.unrecorded.find((player) => player.id === "wilson");
+  assert.equal(wilson.name, "Wilson");
+  assert.equal(wilson.photo, "assets/players/wilson.png");
+  assert.equal(wilson.recorded, false);
+  assert.equal(wilson.net, null);
+  assert.deepEqual(wilson.history, []);
+  assert.equal(sessions.some((session) => (
+    (session.entries || []).some((entry) => entry.playerId === "wilson")
   )), false);
   assert.equal(model.unrecorded.every((player) => player.net === null), true);
   assert.equal(model.unrecorded.every((player) => player.points === null), true);
