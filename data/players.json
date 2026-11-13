@@ -73,5 +73,10 @@
     "id": "wilson",
     "name": "Wilson",
     "photo": "assets/players/wilson.png"
+  },
+  {
+    "id": "him",
+    "name": "Him",
+    "photo": "assets/players/him.png"
   }
 ]

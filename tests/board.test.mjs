@@ -32,7 +32,7 @@ test("players with no recorded result follow every ranked row", () => {
   const model = buildModel(players, sessions);
   const rankedIds = sortStandings(model.standings, "net", "desc").map((player) => player.id);
   const blankIds = model.unrecorded.map((player) => player.id);
-  assert.deepEqual(blankIds, ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson"]);
+  assert.deepEqual(blankIds, ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson", "him"]);
 
   const rows = leaderboardOrder(model.standings, model.unrecorded, "net", "desc");
   assert.deepEqual(rows.map((player) => player.id), [...rankedIds, ...blankIds]);
