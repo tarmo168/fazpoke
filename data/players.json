@@ -68,5 +68,10 @@
     "id": "james",
     "name": "James",
     "photo": "assets/players/james.png"
+  },
+  {
+    "id": "wilson",
+    "name": "Wilson",
+    "photo": "assets/players/wilson.png"
   }
 ]

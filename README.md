@@ -20,8 +20,7 @@ Pages has to be switched on once, with **Settings → Pages → Build and deploy
 
 ## What the site shows
 
-- A leaderboard of total earnings (each player's net across every session), sortable by total earnings or sessions played.
-- A roster for anyone whose result is still unrecorded.
+- A leaderboard of total earnings (each player's net across every session), sortable by total earnings or sessions played. Anyone with no recorded result is on that same list, under the ranked players: photo and name, no rank, 0 sessions, and a blank total.
 - A profile for each player: photo, recorded stats, and the sessions they appear in.
 - A cumulative line for each recorded player, and one chart with every recorded player.
 - A session ledger. One night is on screen at a time, with the latest session open until another is chosen. Entries stay in the order they were written.
@@ -35,9 +34,9 @@ Figures are plain numbers. Positive results use a leading `+`. Negative results 
 
 `0` stays on the board. It is a real result.
 
-`null` means the result was not written down. That entry stays on the roster and in the ledger as unrecorded. It is left out of rankings, buy-in totals, net totals, and charts. It is not stored or counted as zero.
+`null` means the result was not written down. That entry stays in the ledger as unrecorded. It is left out of rankings, buy-in totals, net totals, and charts. It is not stored or counted as zero.
 
-Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na and Guy have no session entry at all. All four stay off the board.
+Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na and Guy have no session entry at all. Players with no recorded result appear at the bottom of the leaderboard and stay off the charts.
 
 The chart draws a zero point labeled Start, before the first session in the file. That point is the baseline of a cumulative line, not an extra session. A later session with no recorded result keeps the previous cumulative total and is drawn as a hollow point.
 
