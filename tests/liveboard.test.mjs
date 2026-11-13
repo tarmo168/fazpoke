@@ -88,6 +88,14 @@ test("names and photos come from the roster", () => {
   const unknown = describePlayers([{ playerId: "ghost", buyIn: 0, stack: 0 }], []);
   assert.equal(unknown[0].name, "ghost");
   assert.equal(unknown[0].photo, "");
+
+  const unpictured = rankedField(
+    [{ playerId: "tae", buyIn: 200, stack: 200 }],
+    [{ id: "tae", name: "Tae" }],
+  );
+  assert.equal(unpictured[0].name, "Tae");
+  assert.equal(unpictured[0].photo, "");
+  assert.equal(unpictured[0].net, 0);
 });
 
 test("a re-buy adds to the buy-in and the stack and leaves the result", () => {
