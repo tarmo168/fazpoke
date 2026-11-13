@@ -651,11 +651,21 @@ async function sessionsWithSheet(fileSessions) {
   }
 }
 
+function ledgerDataUrl(path) {
+  const url = new URL(path, import.meta.url);
+  url.searchParams.set("v", String(Date.now()));
+  return url;
+}
+
 async function load() {
   try {
-    const playersUrl = new URL("../data/players.json", import.meta.url);
-    const sessionsUrl = new URL("../data/sessions.json", import.meta.url);
-    const [playersRes, sessionsRes] = await Promise.all([fetch(playersUrl), fetch(sessionsUrl)]);
+    // Pages sends Cache-Control: max-age=600. Skip that cache so a refresh
+    // shows the latest roster and sessions, including on the Live board.
+    const fresh = { cache: "no-store" };
+    const [playersRes, sessionsRes] = await Promise.all([
+      fetch(ledgerDataUrl("../data/players.json"), fresh),
+      fetch(ledgerDataUrl("../data/sessions.json"), fresh),
+    ]);
     if (!playersRes.ok || !sessionsRes.ok) throw new Error("missing");
     const players = await playersRes.json();
     const sessions = await sessionsRes.json();
