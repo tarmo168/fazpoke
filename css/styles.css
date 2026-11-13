@@ -1172,6 +1172,7 @@ tfoot th, tfoot td {
 
 .lb-buy,
 .lb-rebuy,
+.lb-fix,
 .lb-btn,
 .lb-key {
   border: 1px solid var(--line);
@@ -1180,6 +1181,7 @@ tfoot th, tfoot td {
 
 .lb-buy,
 .lb-rebuy,
+.lb-fix,
 .lb-btn { border-radius: 999px; }
 
 .lb-buy {
@@ -1219,6 +1221,7 @@ tfoot th, tfoot td {
 }
 
 .lb-row-actions .lb-rebuy,
+.lb-row-actions .lb-fix,
 .lb-row-actions .lb-remove {
   flex: 1 1 8.5rem;
 }
@@ -1379,7 +1382,8 @@ tfoot th, tfoot td {
   text-align: right;
 }
 
-.lb-rebuy {
+.lb-rebuy,
+.lb-fix {
   min-height: 48px;
   padding: 10px 14px;
   font-weight: 700;
@@ -1389,6 +1393,7 @@ tfoot th, tfoot td {
 .lb-person:active,
 .lb-key:active,
 .lb-rebuy:active,
+.lb-fix:active,
 .lb-buy:active,
 .lb-join:active { background: rgba(228, 194, 122, 0.18); }
 
@@ -1621,7 +1626,8 @@ body.live-fullscreen .lb-join { min-height: 116px; }
     align-items: center;
   }
 
-  .lb-rebuy { min-width: 8.5rem; }
+  .lb-rebuy,
+  .lb-fix { min-width: 8.5rem; }
 
   .lb-photo { --avatar-size: 72px; width: 72px; height: 72px; }
 }
@@ -1642,7 +1648,8 @@ body.live-fullscreen .lb-join { min-height: 116px; }
     align-items: center;
   }
 
-  .lb-rebuy { min-width: 0; padding: 8px 10px; }
+  .lb-rebuy,
+  .lb-fix { min-width: 0; padding: 8px 10px; }
 
   .lb-hint { margin-top: 6px; font-size: 0.8rem; }
 
