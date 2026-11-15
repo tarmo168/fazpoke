@@ -794,6 +794,28 @@ td.num, tfoot .num { font-weight: 650; }
 .who a { text-decoration: none; font-weight: 620; }
 .who a:hover { color: var(--brass-2); }
 
+.who-id,
+.history-session {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dealer-tag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(228, 194, 122, 0.14);
+  color: var(--brass-2);
+  font-size: 0.68rem;
+  font-weight: 680;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
 tfoot th, tfoot td {
   border-top: 1px solid var(--line);
   font-weight: 650;

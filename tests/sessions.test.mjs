@@ -6,22 +6,44 @@ import {
   parseHash,
   sessionHeading,
   sessionPage,
+  sessionRowTag,
   sessionTabLabel,
 } from "../js/sessions.js";
 
 const players = JSON.parse(readFileSync(new URL("../data/players.json", import.meta.url), "utf8"));
 const sessions = JSON.parse(readFileSync(new URL("../data/sessions.json", import.meta.url), "utf8"));
 
-test("session 1 is dated 6 Nov 2026 and that date is the heading", () => {
+test("session 2 is the latest night and is headed 13 Nov 2026", () => {
   assert.equal(sessions[0].date, "2026-11-06");
+  assert.equal(sessions[1].date, "2026-11-13");
   const model = buildModel(players, sessions);
   const page = sessionPage(model.sessions, "");
-  assert.equal(page.session.id, "session-1");
-  assert.equal(page.heading, "Session 1 · 6 Nov 2026");
-  assert.equal(page.showTabs, false);
-  assert.equal(page.session.totalEarnings, 1790);
+  assert.equal(page.session.id, "session-2");
+  assert.equal(page.heading, "Session 2 · 13 Nov 2026");
+  assert.equal(page.showTabs, true);
+  assert.equal(page.session.totalEarnings, 5220);
+  assert.deepEqual(page.tabs.map((tab) => [tab.label, tab.selected, tab.hash]), [
+    ["S1 · 6 Nov", false, "#/sessions/1"],
+    ["S2 · 13 Nov", true, "#/sessions/2"],
+  ]);
+  const first = sessionPage(model.sessions, "1");
+  assert.equal(first.heading, "Session 1 · 6 Nov 2026");
+  assert.equal(first.session.totalEarnings, 1790);
   assert.equal(model.byId.get("dom").history[0].date, "2026-11-06");
   assert.equal(sessionHeading(model.byId.get("dom").history[0]), "Session 1 · 6 Nov 2026");
+  assert.equal(sessionHeading(model.byId.get("guy").history[0]), "Session 2 · 13 Nov 2026");
+
+  const guy = page.session.rows.find((row) => row.playerId === "guy");
+  assert.equal(sessionRowTag(guy), "Dealer");
+  assert.equal(sessionRowTag(page.session.rows.find((row) => row.playerId === "zack")), "");
+  assert.equal(sessionRowTag({ dealer: false }), "");
+  assert.equal(sessionRowTag({}), "");
+  assert.equal(sessionRowTag(null), "");
+  const sheet = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const style = readFileSync(new URL("../css/styles.css", import.meta.url), "utf8");
+  assert.equal(sheet.includes("sessionRowTag"), true);
+  assert.equal(sheet.includes("dealer-tag"), true);
+  assert.equal(style.includes(".dealer-tag"), true);
 });
 
 test("the latest of two sessions is selected by default", () => {

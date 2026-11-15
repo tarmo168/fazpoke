@@ -15,7 +15,7 @@ import { mountLive, unmountLive, updateLiveSessions } from "./live.js";
 import { SHEET_API_URL } from "./config.js";
 import { loadSheetSessions, mergeSessions, onLedgerRefresh, sheetEnabled } from "./sheets.js";
 import { closeInvite, openInvite } from "./invite.js";
-import { parseHash, sessionHash, sessionHeading, sessionPage } from "./sessions.js";
+import { parseHash, sessionHash, sessionHeading, sessionPage, sessionRowTag } from "./sessions.js";
 import {
   SITE_URL,
   canWebShare,
@@ -452,11 +452,15 @@ function ledger(model) {
     el("tbody", {}, session.rows.map((row) => {
       const person = model.byId.get(row.playerId);
       const name = person?.name || row.playerId;
+      const tag = sessionRowTag(row);
       const who = el("span", { class: "who" }, [
         avatar(person || { name }),
-        person
-          ? el("a", { href: `#/player/${person.id}`, text: name })
-          : el("span", { text: name }),
+        el("span", { class: "who-id" }, [
+          person
+            ? el("a", { href: `#/player/${person.id}`, text: name })
+            : el("span", { text: name }),
+          tag ? el("span", { class: "dealer-tag", text: tag }) : null,
+        ]),
       ]);
       const netCell = row.recorded
         ? el("td", { class: `num ${signedClass(row.net)}`, text: formatSigned(row.net) })
@@ -558,19 +562,25 @@ function profile(model, colors) {
   if (!player.history.length) {
     history.append(el("p", { class: "note", text: "No session on record." }));
   } else {
-    history.append(el("ul", { class: "history" }, player.history.map((item) => el("li", {}, [
-      el("a", {
-        href: sessionHash({ id: item.sessionId, label: item.label }),
-        text: sessionHeading(item),
-      }),
-      el("span", {
-        class: "num",
-        text: item.buyIn == null ? "Buy-in —" : `Buy-in ${formatAmount(item.buyIn)}`,
-      }),
-      item.recorded
-        ? el("span", { class: `num ${signedClass(item.net)}`, text: formatSigned(item.net) })
-        : el("span", { class: "pending", text: "Unrecorded" }),
-    ]))));
+    history.append(el("ul", { class: "history" }, player.history.map((item) => {
+      const tag = sessionRowTag(item);
+      return el("li", {}, [
+        el("span", { class: "history-session" }, [
+          el("a", {
+            href: sessionHash({ id: item.sessionId, label: item.label }),
+            text: sessionHeading(item),
+          }),
+          tag ? el("span", { class: "dealer-tag", text: tag }) : null,
+        ]),
+        el("span", {
+          class: "num",
+          text: item.buyIn == null ? "Buy-in —" : `Buy-in ${formatAmount(item.buyIn)}`,
+        }),
+        item.recorded
+          ? el("span", { class: `num ${signedClass(item.net)}`, text: formatSigned(item.net) })
+          : el("span", { class: "pending", text: "Unrecorded" }),
+      ]);
+    })));
   }
   page.append(history);
   return page;

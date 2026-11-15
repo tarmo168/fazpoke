@@ -36,7 +36,9 @@ Figures are plain numbers. Positive results use a leading `+`. Negative results 
 
 `null` means the result was not written down. That entry stays in the ledger as unrecorded. It is left out of rankings, buy-in totals, net totals, and charts. It is not stored or counted as zero.
 
-Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na and Guy have no session entry at all. Players with no recorded result appear at the bottom of the leaderboard and stay off the charts.
+Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na has no session entry at all. Chase, JJ, Dom, Na, and Tip sat out Session 2, so that night's entries leave them out. Players with no recorded result appear at the bottom of the leaderboard and stay off the charts.
+
+Guy dealt Session 2. His entry is `{ "playerId": "guy", "buyIn": 0, "net": 405, "dealer": true }`. The `405` counts toward his total earnings, his leaderboard place, his sparkline, the session balance, and that session's total earnings. It does not count as a session played, so his session count stays `0`. He is ranked with the other results. Fish is the lowest total earnings, including someone whose only result is a dealer net. Rank never divides earnings by sessions played.
 
 The chart draws a zero point labeled Start, before the first session in the file. That point is the baseline of a cumulative line, not an extra session. A later session with no recorded result keeps the previous cumulative total and is drawn as a hollow point.
 
@@ -55,12 +57,13 @@ Append one object to the array in `data/sessions.json`.
   - `playerId` must match an `id` in `data/players.json`.
   - `buyIn` is a number.
   - `net` is a number when the result was written down, including `0` for a break-even. Use `null` when the result is unrecorded.
+  - `dealer` is `true` when that player dealt instead of playing. The net still counts as earnings. Leave the field off for a played seat.
 
 ```json
 {
-  "id": "session-2",
-  "label": "Session 2",
-  "date": "2026-11-13",
+  "id": "session-3",
+  "label": "Session 3",
+  "date": "2026-11-20",
   "entries": [
     { "playerId": "taam", "buyIn": 0, "net": null }
   ]
@@ -75,7 +78,7 @@ Check the sheet before pushing:
 node --test tests/ledger.test.mjs tests/sessions.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs tests/share.test.mjs tests/avatar.test.mjs
 ```
 
-Recorded nets on a finished session should add up to `0`. The test locks Session 1 at buy-in `3,700` and net `0`.
+Recorded nets on a finished session should add up to `0`, including a dealer net. Session 1 is buy-in `3,700` and net `0`. Session 2 is buy-in `8,500` and net `0`, with Guy's dealer net of `405` inside that sum.
 
 ## Live leaderboard
 

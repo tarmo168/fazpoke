@@ -35,6 +35,11 @@ export function sessionHeading(session) {
   return date ? `${label} · ${date}` : label;
 }
 
+/** "Dealer" beside a dealer row. Empty for a played seat. */
+export function sessionRowTag(row) {
+  return row?.dealer === true ? "Dealer" : "";
+}
+
 export function sessionTabLabel(session) {
   const number = sessionNumberOf(session);
   const name = number != null ? `S${number}` : (session?.label || "Session");
