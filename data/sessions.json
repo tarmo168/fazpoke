@@ -14,5 +14,24 @@
       { "playerId": "chase", "buyIn": 0, "net": null },
       { "playerId": "jj", "buyIn": 0, "net": null }
     ]
+  },
+  {
+    "id": "session-2",
+    "label": "Session 2",
+    "date": "2026-11-13",
+    "entries": [
+      { "playerId": "zack", "buyIn": 400, "net": 2165 },
+      { "playerId": "tae", "buyIn": 200, "net": 1915 },
+      { "playerId": "taam", "buyIn": 400, "net": 735 },
+      { "playerId": "will", "buyIn": 800, "net": 0 },
+      { "playerId": "fah", "buyIn": 600, "net": -60 },
+      { "playerId": "him", "buyIn": 1200, "net": -260 },
+      { "playerId": "james", "buyIn": 400, "net": -400 },
+      { "playerId": "bank", "buyIn": 600, "net": -600 },
+      { "playerId": "golf", "buyIn": 1200, "net": -1200 },
+      { "playerId": "eye", "buyIn": 1300, "net": -1300 },
+      { "playerId": "wilson", "buyIn": 1400, "net": -1400 },
+      { "playerId": "guy", "buyIn": 0, "net": 405, "dealer": true }
+    ]
   }
 ]

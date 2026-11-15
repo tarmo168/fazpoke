@@ -32,7 +32,7 @@ test("players with no recorded result follow every ranked row", () => {
   const model = buildModel(players, sessions);
   const rankedIds = sortStandings(model.standings, "net", "desc").map((player) => player.id);
   const blankIds = model.unrecorded.map((player) => player.id);
-  assert.deepEqual(blankIds, ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson", "him", "tae"]);
+  assert.deepEqual(blankIds, ["chase", "jj", "na"]);
 
   const rows = leaderboardOrder(model.standings, model.unrecorded, "net", "desc");
   assert.deepEqual(rows.map((player) => player.id), [...rankedIds, ...blankIds]);
@@ -61,10 +61,24 @@ test("players with no recorded result follow every ranked row", () => {
     assert.equal(badges.has(player.id), false);
     assert.equal((badges.get(player.id) || []).some((badge) => badge.id === "fish"), false);
   }
-  assert.equal(badges.get("zack").some((badge) => badge.id === "fish"), true);
+  assert.equal(badges.get("wilson").some((badge) => badge.id === "fish"), true);
+  assert.equal(badges.get("zack").some((badge) => badge.id === "fish"), false);
+  assert.equal(badges.get("guy").some((badge) => badge.id === "fish"), false);
   for (const id of rankedIds) assert.equal(boardRowText(model.standings.find((player) => player.id === id)).sparkline, true);
 
+  const guy = model.standings.find((player) => player.id === "guy");
+  const guyText = boardRowText(guy);
+  assert.equal(guy.recorded, true);
+  assert.equal(guy.sessionsPlayed, 0);
+  assert.equal(guy.net, 405);
+  assert.equal(guyText.ranked, true);
+  assert.equal(guyText.sessions, "0");
+  assert.equal(guyText.sparkline, true);
+  assert.deepEqual(cumulativeNets(guy), [405]);
+
   const bySessions = leaderboardOrder(model.standings, model.unrecorded, "sessionsPlayed", "asc");
+  assert.equal(bySessions[0].id, "guy");
+  assert.equal(bySessions[0].recorded, true);
   assert.equal(bySessions.findIndex((player) => player.recorded !== true), model.standings.length);
   assert.deepEqual(bySessions.slice(model.standings.length).map((player) => player.id), blankIds);
 
@@ -121,9 +135,20 @@ test("one session marks every recorded player new and leaves blanks alone", () =
   const model = buildModel(players, sessions);
   const moves = rankMoves(model.standings, model.sessions);
   assert.equal(moves.size, model.standings.length);
-  for (const player of model.standings) {
-    assert.deepEqual(moves.get(player.id), { change: "new", places: 0 });
-  }
+  assert.deepEqual(moves.get("tae"), { change: "new", places: 0 });
+  assert.deepEqual(moves.get("zack"), { change: "up", places: 5 });
+  assert.deepEqual(moves.get("dom"), { change: "down", places: 2 });
+  assert.deepEqual(moves.get("will"), { change: "down", places: 2 });
+  assert.deepEqual(moves.get("taam"), { change: "down", places: 2 });
+  assert.deepEqual(moves.get("guy"), { change: "new", places: 0 });
+  assert.deepEqual(moves.get("fah"), { change: "down", places: 3 });
+  assert.deepEqual(moves.get("him"), { change: "new", places: 0 });
+  assert.deepEqual(moves.get("james"), { change: "new", places: 0 });
+  assert.deepEqual(moves.get("tip"), { change: "down", places: 4 });
+  assert.deepEqual(moves.get("bank"), { change: "down", places: 6 });
+  assert.deepEqual(moves.get("golf"), { change: "new", places: 0 });
+  assert.deepEqual(moves.get("eye"), { change: "new", places: 0 });
+  assert.deepEqual(moves.get("wilson"), { change: "new", places: 0 });
   for (const player of model.unrecorded) assert.equal(moves.has(player.id), false);
 });
 
@@ -335,13 +360,16 @@ test("consistency is the lowest population standard deviation, with ties kept", 
 test("badges award ties, cap at two, and hide consistency when nobody qualifies", () => {
   const model = buildModel(players, sessions);
   const live = awardBadges(model.standings);
-  assert.deepEqual(ids(live, "dom"), ["chip", "win"]);
-  assert.deepEqual(ids(live, "zack"), ["fish"]);
-  const fish = live.get("zack")[0];
+  assert.deepEqual(ids(live, "tae"), ["chip"]);
+  assert.deepEqual(ids(live, "zack"), ["win"]);
+  assert.deepEqual(ids(live, "wilson"), ["fish"]);
+  assert.deepEqual(ids(live, "fah"), ["cold"]);
+  assert.deepEqual(ids(live, "bank"), ["cold"]);
+  const fish = live.get("wilson")[0];
   assert.equal(fish.mark, "🐟");
   assert.equal(fish.label, "Fish");
   assert.equal(fish.title, "Lowest total earnings.");
-  for (const id of ["will", "taam", "fah", "bank", "tip"]) {
+  for (const id of ["dom", "will", "taam", "guy", "him", "james", "tip", "golf", "eye"]) {
     assert.deepEqual(ids(live, id), []);
   }
   for (const player of model.unrecorded) assert.equal(live.has(player.id), false);
@@ -417,4 +445,78 @@ test("fish marks every player tied for the lowest recorded total", () => {
   assert.equal(awardBadges([]).size, 0);
   assert.equal(awardBadges(null).size, 0);
   assert.equal(awardBadges([{ id: "blank", net: null }]).size, 0);
+});
+
+test("fish and rank use total earnings when a dealer has no sessions played", () => {
+  const lowest = buildModel(
+    [
+      { id: "ace", name: "Ace" },
+      { id: "host", name: "Host" },
+      { id: "blank", name: "Blank" },
+    ],
+    [{
+      id: "s1",
+      label: "Session 1",
+      entries: [
+        { playerId: "ace", buyIn: 10, net: 4 },
+        { playerId: "host", buyIn: 0, net: -4, dealer: true },
+      ],
+    }],
+  );
+  const host = lowest.standings.find((player) => player.id === "host");
+  assert.equal(host.sessionsPlayed, 0);
+  assert.equal(host.net, -4);
+  assert.equal(host.recorded, true);
+  const lowestOrder = leaderboardOrder(lowest.standings, lowest.unrecorded, "net", "desc");
+  assert.deepEqual(lowestOrder.map((player) => player.id), ["ace", "host", "blank"]);
+  const lowestBadges = awardBadges(lowestOrder);
+  assert.deepEqual(ids(lowestBadges, "host"), ["fish"]);
+  assert.equal(lowestBadges.get("ace").some((badge) => badge.id === "chip"), true);
+  assert.equal(lowestBadges.has("blank"), false);
+  assert.equal(boardRowText(host).ranked, true);
+  assert.equal(boardRowText(host).sessions, "0");
+  assert.equal(boardRowText(host).sparkline, true);
+  assert.deepEqual(cumulativeNets(host), [-4]);
+  assert.equal(boardRowText(lowest.unrecorded[0]).ranked, false);
+
+  const byAverage = buildModel(
+    [
+      { id: "grinder", name: "Grinder" },
+      { id: "host", name: "Host" },
+    ],
+    [
+      {
+        id: "s1",
+        label: "Session 1",
+        entries: [
+          { playerId: "grinder", buyIn: 10, net: -6 },
+          { playerId: "host", buyIn: 0, net: -10, dealer: true },
+        ],
+      },
+      {
+        id: "s2",
+        label: "Session 2",
+        entries: [{ playerId: "grinder", buyIn: 10, net: -6 }],
+      },
+    ],
+  );
+  const dealer = byAverage.standings.find((player) => player.id === "host");
+  const grinder = byAverage.standings.find((player) => player.id === "grinder");
+  assert.equal(dealer.sessionsPlayed, 0);
+  assert.equal(dealer.net, -10);
+  assert.equal(grinder.sessionsPlayed, 2);
+  assert.equal(grinder.net, -12);
+  const order = leaderboardOrder(byAverage.standings, byAverage.unrecorded, "net", "desc");
+  assert.deepEqual(order.map((player) => [player.id, player.net, player.sessionsPlayed]), [
+    ["host", -10, 0],
+    ["grinder", -12, 2],
+  ]);
+  const badges = awardBadges(order);
+  assert.equal(badges.get("grinder").some((badge) => badge.id === "fish"), true);
+  assert.equal(badges.get("host").some((badge) => badge.id === "fish"), false);
+  assert.equal(badges.get("host").some((badge) => badge.id === "chip"), true);
+
+  const bySessions = leaderboardOrder(byAverage.standings, byAverage.unrecorded, "sessionsPlayed", "asc");
+  assert.equal(bySessions[0].id, "host");
+  assert.equal(bySessions.at(-1).recorded, true);
 });

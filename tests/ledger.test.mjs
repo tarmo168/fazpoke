@@ -9,109 +9,71 @@ const root = new URL("..", import.meta.url);
 const players = JSON.parse(readFileSync(new URL("../data/players.json", import.meta.url), "utf8"));
 const sessions = JSON.parse(readFileSync(new URL("../data/sessions.json", import.meta.url), "utf8"));
 
-test("roster and session 1 are the recorded sheet", () => {
+test("roster and the recorded sessions match the sheet", () => {
   assert.deepEqual(players.map((player) => player.name), [
     "Taam", "Bank", "Chase", "Fah", "JJ", "Dom", "Na", "Tip", "Will", "Zack", "Guy", "Golf", "Eye", "James", "Wilson", "Him", "Tae",
   ]);
-  assert.equal(sessions.length, 1);
+  assert.equal(sessions.length, 2);
   assert.equal(sessions[0].label, "Session 1");
   assert.equal(sessions[0].date, "2026-11-06");
+  assert.equal(sessions[1].label, "Session 2");
+  assert.equal(sessions[1].date, "2026-11-13");
+  const ids = new Set(players.map((player) => player.id));
+  for (const session of sessions) {
+    for (const entry of session.entries) assert.equal(ids.has(entry.playerId), true);
+  }
   const blob = JSON.stringify(players) + JSON.stringify(sessions);
-  assert.deepEqual(blob.match(/\d{4}-\d{2}-\d{2}/g), ["2026-11-06"]);
+  assert.deepEqual(blob.match(/\d{4}-\d{2}-\d{2}/g), ["2026-11-06", "2026-11-13"]);
   assert.equal(/vpip|hourly/i.test(blob), false);
 });
 
 test("session 1 totals and the break-even stay exact", () => {
   const model = buildModel(players, sessions);
-  assert.equal(model.totals.buyIn, 3700);
-  assert.equal(model.totals.net, 0);
   assert.equal(model.sessions[0].buyIn, 3700);
   assert.equal(model.sessions[0].net, 0);
   assert.equal(model.sessions[0].totalEarnings, 1790);
-  assert.equal(model.totals.totalEarnings, 1790);
+  assert.equal(model.totals.sessions, 2);
+  assert.equal(model.totals.buyIn, 12200);
+  assert.equal(model.totals.net, 0);
+  assert.equal(model.totals.totalEarnings, 7010);
   assert.equal(model.standings.reduce((sum, player) => sum + player.net, 0), 0);
-  assert.equal(model.standings.reduce((sum, player) => sum + player.buyIn, 0), 3700);
-  assert.deepEqual(
-    Object.fromEntries(model.standings.map((player) => [player.id, player.buyIn])),
-    { dom: 400, will: 800, taam: 500, fah: 400, bank: 400, tip: 400, zack: 800 },
-  );
+  assert.equal(model.standings.reduce((sum, player) => sum + player.buyIn, 0), 12200);
 
   const taam = model.standings.find((player) => player.id === "taam");
-  assert.equal(taam.net, 0);
-  assert.equal(taam.buyIn, 500);
-  assert.equal(taam.sessionsPlayed, 1);
-  assert.deepEqual(taam.points.map((point) => point.kind), ["baseline", "played"]);
+  assert.equal(taam.net, 735);
+  assert.equal(taam.buyIn, 900);
+  assert.equal(taam.sessionsPlayed, 2);
+  assert.deepEqual(taam.points.map((point) => point.kind), ["baseline", "played", "played"]);
   assert.equal(taam.points[1].value, 0);
   assert.equal(taam.points[1].delta, 0);
+  assert.equal(taam.points[2].value, 735);
+  assert.equal(taam.points[2].delta, 735);
 
-  assert.deepEqual(model.unrecorded.map((player) => player.id), ["chase", "jj", "na", "guy", "golf", "eye", "james", "wilson", "him", "tae"]);
-  const guy = model.unrecorded.find((player) => player.id === "guy");
-  assert.equal(guy.name, "Guy");
-  assert.equal(guy.photo, "assets/players/guy.png");
-  assert.equal(guy.recorded, false);
-  assert.equal(guy.net, null);
-  assert.deepEqual(guy.history, []);
-  assert.equal(sessions.some((session) => (
-    (session.entries || []).some((entry) => entry.playerId === "guy")
-  )), false);
-  const golf = model.unrecorded.find((player) => player.id === "golf");
-  assert.equal(golf.name, "Golf");
-  assert.equal(golf.photo, "assets/players/golf.png");
-  assert.equal(golf.recorded, false);
-  assert.equal(golf.net, null);
-  assert.deepEqual(golf.history, []);
-  assert.equal(sessions.some((session) => (
-    (session.entries || []).some((entry) => entry.playerId === "golf")
-  )), false);
-  const eye = model.unrecorded.find((player) => player.id === "eye");
-  assert.equal(eye.name, "Eye");
-  assert.equal(eye.photo, "assets/players/eye.png");
-  assert.equal(eye.recorded, false);
-  assert.equal(eye.net, null);
-  assert.deepEqual(eye.history, []);
-  assert.equal(sessions.some((session) => (
-    (session.entries || []).some((entry) => entry.playerId === "eye")
-  )), false);
-  const james = model.unrecorded.find((player) => player.id === "james");
-  assert.equal(james.name, "James");
-  assert.equal(james.photo, "assets/players/james.png");
-  assert.equal(james.recorded, false);
-  assert.equal(james.net, null);
-  assert.deepEqual(james.history, []);
-  assert.equal(sessions.some((session) => (
-    (session.entries || []).some((entry) => entry.playerId === "james")
-  )), false);
-  const wilson = model.unrecorded.find((player) => player.id === "wilson");
-  assert.equal(wilson.name, "Wilson");
-  assert.equal(wilson.photo, "assets/players/wilson.png");
-  assert.equal(wilson.recorded, false);
-  assert.equal(wilson.net, null);
-  assert.deepEqual(wilson.history, []);
-  assert.equal(sessions.some((session) => (
-    (session.entries || []).some((entry) => entry.playerId === "wilson")
-  )), false);
-  const him = model.unrecorded.find((player) => player.id === "him");
-  assert.equal(him.name, "Him");
-  assert.equal(him.photo, "assets/players/him.png");
-  assert.equal(him.recorded, false);
-  assert.equal(him.net, null);
-  assert.deepEqual(him.history, []);
-  assert.equal(sessions.some((session) => (
-    (session.entries || []).some((entry) => entry.playerId === "him")
-  )), false);
-  const tae = model.unrecorded.find((player) => player.id === "tae");
-  assert.equal(tae.name, "Tae");
-  assert.equal(Object.hasOwn(tae, "photo"), false);
-  assert.equal(tae.recorded, false);
-  assert.equal(tae.net, null);
-  assert.deepEqual(tae.history, []);
-  assert.equal(sessions.some((session) => (
-    (session.entries || []).some((entry) => entry.playerId === "tae")
-  )), false);
+  const will = model.standings.find((player) => player.id === "will");
+  assert.equal(will.net, 880);
+  assert.equal(will.sessionsPlayed, 2);
+  assert.equal(will.history[1].net, 0);
+  assert.equal(will.history[1].recorded, true);
+
+  assert.deepEqual(model.unrecorded.map((player) => player.id), ["chase", "jj", "na"]);
   assert.equal(model.unrecorded.every((player) => player.net === null), true);
   assert.equal(model.unrecorded.every((player) => player.points === null), true);
+  assert.equal(model.unrecorded.every((player) => player.sessionsPlayed === 0), true);
   assert.deepEqual(model.byId.get("chase").history.map((item) => item.net), [null]);
+  assert.deepEqual(model.byId.get("jj").history.map((item) => [item.sessionId, item.recorded]), [["session-1", false]]);
   assert.deepEqual(model.byId.get("na").history, []);
+  assert.equal(model.unrecorded.find((player) => player.id === "na").recorded, false);
+
+  const absent = new Set(sessions[1].entries.map((entry) => entry.playerId));
+  for (const id of ["chase", "jj", "dom", "na", "tip"]) assert.equal(absent.has(id), false);
+  const dom = model.standings.find((player) => player.id === "dom");
+  assert.equal(dom.sessionsPlayed, 1);
+  assert.equal(dom.net, 910);
+  assert.deepEqual(dom.history.map((item) => item.sessionId), ["session-1"]);
+  const tip = model.standings.find((player) => player.id === "tip");
+  assert.equal(tip.sessionsPlayed, 1);
+  assert.equal(tip.net, -400);
+  assert.deepEqual(tip.history.map((item) => item.sessionId), ["session-1"]);
 });
 
 test("total earnings sums positive recorded nets and ignores blanks", () => {
@@ -147,12 +109,21 @@ test("leaderboard orders by total earnings, then sessions", () => {
   const model = buildModel(players, sessions);
   const byEarnings = sortStandings(model.standings, "net", "desc");
   assert.deepEqual(byEarnings.map((player) => player.id), [
-    "dom", "will", "taam", "fah", "bank", "tip", "zack",
+    "tae", "zack", "dom", "will", "taam", "guy", "fah", "him", "james", "tip", "bank", "golf", "eye", "wilson",
   ]);
-  assert.deepEqual(byEarnings.map((player) => player.net), [910, 880, 0, -190, -400, -400, -800]);
+  assert.deepEqual(byEarnings.map((player) => player.net), [
+    1915, 1365, 910, 880, 735, 405, -250, -260, -400, -400, -1000, -1200, -1300, -1400,
+  ]);
+  assert.deepEqual(byEarnings.map((player) => player.sessionsPlayed), [
+    1, 2, 1, 2, 2, 0, 2, 1, 1, 1, 2, 1, 1, 1,
+  ]);
 
-  const tiedSessions = sortStandings(model.standings, "sessionsPlayed", "desc");
-  assert.deepEqual(tiedSessions.map((player) => player.id), byEarnings.map((player) => player.id));
+  const bySessions = sortStandings(model.standings, "sessionsPlayed", "desc");
+  assert.deepEqual(bySessions.map((player) => player.id), [
+    "zack", "will", "taam", "fah", "bank", "tae", "dom", "him", "james", "tip", "golf", "eye", "wilson", "guy",
+  ]);
+  assert.equal(bySessions.at(-1).sessionsPlayed, 0);
+  assert.equal(bySessions.at(-1).recorded, true);
 
   const mixed = buildModel(
     [{ id: "a", name: "A" }, { id: "b", name: "B" }, { id: "c", name: "C" }],
@@ -176,8 +147,8 @@ test("leaderboard orders by total earnings, then sessions", () => {
       },
     ],
   );
-  const bySessions = sortStandings(mixed.standings, "sessionsPlayed", "desc");
-  assert.deepEqual(bySessions.map((player) => [player.id, player.sessionsPlayed, player.net]), [
+  const mixedBySessions = sortStandings(mixed.standings, "sessionsPlayed", "desc");
+  assert.deepEqual(mixedBySessions.map((player) => [player.id, player.sessionsPlayed, player.net]), [
     ["a", 2, 15],
     ["c", 2, -30],
     ["b", 1, 40],
@@ -223,6 +194,123 @@ test("a blank result is never coerced to zero, and a skipped session carries the
     ["carried", 0],
     ["played", 20],
   ]);
+});
+
+test("a dealer result counts toward earnings and not toward sessions played", () => {
+  const roster = [
+    { id: "ace", name: "Ace" },
+    { id: "host", name: "Host" },
+    { id: "pat", name: "Pat" },
+  ];
+  const model = buildModel(roster, [
+    {
+      id: "s1",
+      label: "Session 1",
+      entries: [
+        { playerId: "ace", buyIn: 100, net: 30 },
+        { playerId: "host", buyIn: 0, net: -20, dealer: true },
+        { playerId: "pat", buyIn: 100, net: -10 },
+      ],
+    },
+    {
+      id: "s2",
+      label: "Session 2",
+      entries: [
+        { playerId: "ace", buyIn: 100, net: -15 },
+        { playerId: "host", buyIn: 0, net: 25, dealer: true },
+        { playerId: "pat", buyIn: 0, net: -10, dealer: "true" },
+      ],
+    },
+  ]);
+
+  assert.equal(model.sessions[0].net, 0);
+  assert.equal(model.sessions[1].net, 0);
+  assert.equal(model.sessions[0].totalEarnings, 30);
+  assert.equal(model.sessions[1].totalEarnings, 25);
+  assert.equal(model.totals.totalEarnings, 55);
+  assert.equal(model.sessions[0].rows.find((row) => row.playerId === "host").dealer, true);
+  assert.equal(model.sessions[0].rows.find((row) => row.playerId === "ace").dealer, false);
+
+  const host = model.standings.find((player) => player.id === "host");
+  assert.equal(model.unrecorded.some((player) => player.id === "host"), false);
+  assert.equal(host.recorded, true);
+  assert.equal(host.sessionsPlayed, 0);
+  assert.equal(host.net, 5);
+  assert.equal(host.buyIn, 0);
+  assert.equal(host.best, 25);
+  assert.equal(host.worst, -20);
+  assert.deepEqual(host.points.map((point) => [point.kind, point.value, point.dealer]), [
+    ["baseline", 0, false],
+    ["played", -20, true],
+    ["played", 5, true],
+  ]);
+
+  const pat = model.standings.find((player) => player.id === "pat");
+  assert.equal(pat.sessionsPlayed, 2);
+  assert.equal(pat.net, -20);
+  assert.equal(pat.history[1].dealer, false);
+
+  const playedAndDealt = buildModel(
+    [{ id: "pat", name: "Pat" }],
+    [
+      { id: "s1", label: "Session 1", entries: [{ playerId: "pat", buyIn: 10, net: 10 }] },
+      { id: "s2", label: "Session 2", entries: [{ playerId: "pat", buyIn: 0, net: 4, dealer: true }] },
+    ],
+  );
+  const mixed = playedAndDealt.standings[0];
+  assert.equal(mixed.sessionsPlayed, 1);
+  assert.equal(mixed.net, 14);
+  assert.deepEqual(mixed.points.map((point) => [point.kind, point.value, point.dealer]), [
+    ["baseline", 0, false],
+    ["played", 10, false],
+    ["played", 14, true],
+  ]);
+  assert.equal(playedAndDealt.sessions[1].totalEarnings, 4);
+  assert.equal(playedAndDealt.sessions[1].net, 4);
+});
+
+test("session 2 keeps Guy's dealer earnings off the session count", () => {
+  const model = buildModel(players, sessions);
+  const night = model.sessions[1];
+  assert.equal(night.id, "session-2");
+  assert.equal(night.date, "2026-11-13");
+  assert.equal(night.buyIn, 8500);
+  assert.equal(night.net, 0);
+  assert.equal(night.totalEarnings, 5220);
+  assert.equal(night.rows.reduce((sum, row) => sum + row.net, 0), 0);
+  assert.deepEqual(night.rows.at(-1), {
+    playerId: "guy",
+    buyIn: 0,
+    net: 405,
+    recorded: true,
+    dealer: true,
+  });
+  assert.equal(night.rows.some((row) => row.playerId !== "guy" && row.dealer), false);
+
+  const guy = model.standings.find((player) => player.id === "guy");
+  assert.equal(guy.name, "Guy");
+  assert.equal(guy.photo, "assets/players/guy.png");
+  assert.equal(guy.recorded, true);
+  assert.equal(guy.sessionsPlayed, 0);
+  assert.equal(guy.net, 405);
+  assert.equal(guy.buyIn, 0);
+  assert.equal(guy.best, 405);
+  assert.equal(guy.worst, 405);
+  assert.equal(guy.history.length, 1);
+  assert.equal(guy.history[0].dealer, true);
+  assert.equal(guy.history[0].sessionId, "session-2");
+  assert.deepEqual(guy.points.map((point) => [point.kind, point.value, point.dealer]), [
+    ["baseline", 0, false],
+    ["carried", 0, false],
+    ["played", 405, true],
+  ]);
+  assert.equal(model.unrecorded.some((player) => player.id === "guy"), false);
+
+  const tae = model.standings.find((player) => player.id === "tae");
+  assert.equal(tae.name, "Tae");
+  assert.equal(Object.hasOwn(tae, "photo"), false);
+  assert.equal(tae.net, 1915);
+  assert.equal(tae.sessionsPlayed, 1);
 });
 
 test("figures are plain signed numbers", () => {

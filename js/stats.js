@@ -5,6 +5,14 @@
  * 0 is a recorded break-even and stays on the board.
  * null, or a missing net, is unrecorded and is never coerced to 0.
  *
+ * A dealer entry (`dealer: true`) is a recorded result when its net is a
+ * finite number. That net counts toward total earnings, leaderboard rank,
+ * sparklines, the session balance, and the session's total earnings.
+ * It does not count as a session played. A player whose only results are
+ * dealer earnings is still ranked by total earnings, with a session count
+ * of 0. Rank and the Fish badge use that total, never earnings divided
+ * by sessions played.
+ *
  * Total earnings for a session is the sum of its positive recorded nets,
  * the amount that changed hands. The all-sessions figure adds those up.
  * Break-even and unrecorded results add nothing.
@@ -16,6 +24,10 @@ export function isRecordedNet(net) {
 
 function isFiniteNumber(value) {
   return typeof value === "number" && Number.isFinite(value);
+}
+
+function isDealer(entry) {
+  return entry?.dealer === true;
 }
 
 function totalEarnings(rows) {
@@ -51,6 +63,7 @@ export function buildModel(players, sessions) {
 
       const recorded = isRecordedNet(entry.net);
       const buyKnown = isFiniteNumber(entry.buyIn);
+      const dealer = isDealer(entry);
       if (recorded) {
         net += entry.net;
         if (buyKnown) buyIn += entry.buyIn;
@@ -62,6 +75,7 @@ export function buildModel(players, sessions) {
         buyIn: buyKnown ? entry.buyIn : null,
         net: recorded ? entry.net : null,
         recorded,
+        dealer,
       };
       rows.push(row);
 
@@ -75,6 +89,7 @@ export function buildModel(players, sessions) {
           buyIn: row.buyIn,
           net: row.net,
           recorded,
+          dealer,
         });
       }
     }
@@ -119,22 +134,34 @@ export function buildModel(players, sessions) {
     );
     const histBySession = new Map(player.history.map((item) => [item.sessionId, item]));
     let cum = 0;
-    const points = [{ label: "Start", value: 0, kind: "baseline", delta: null }];
+    const points = [{ label: "Start", value: 0, kind: "baseline", delta: null, dealer: false }];
 
     for (const session of sessionViews) {
       const item = histBySession.get(session.id);
       if (item && item.recorded) {
         cum += item.net;
-        points.push({ label: session.label, value: cum, kind: "played", delta: item.net });
+        points.push({
+          label: session.label,
+          value: cum,
+          kind: "played",
+          delta: item.net,
+          dealer: item.dealer === true,
+        });
       } else {
-        points.push({ label: session.label, value: cum, kind: "carried", delta: null });
+        points.push({
+          label: session.label,
+          value: cum,
+          kind: "carried",
+          delta: null,
+          dealer: false,
+        });
       }
     }
 
     standings.push({
       ...player,
       recorded: true,
-      sessionsPlayed: recordedHist.length,
+      sessionsPlayed: recordedHist.filter((item) => item.dealer !== true).length,
       buyIn,
       net,
       best: Math.max(...nets),
@@ -383,8 +410,10 @@ function streakBadge(type, length) {
  * Up to two badges per player, in this order:
  * chip leader, fish, hot streak, cold streak, most consistent, biggest win.
  * Ties go to every player who shares the mark. Fish is the lowest total
- * earnings among players with a recorded result. Consistency is omitted
- * when nobody has 3 recorded sessions.
+ * earnings among players with a recorded result, including dealer earnings
+ * from a player with 0 sessions played. Place and Fish use that total,
+ * not an average per session. Consistency is omitted when nobody has
+ * 3 recorded results.
  */
 export function awardBadges(players) {
   const rows = [];
