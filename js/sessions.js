@@ -40,11 +40,21 @@ export function sessionRowTag(row) {
   return row?.dealer === true ? "Dealer" : "";
 }
 
-export function sessionTabLabel(session) {
+function sessionName(session) {
   const number = sessionNumberOf(session);
-  const name = number != null ? `S${number}` : (session?.label || "Session");
-  const day = formatSessionDay(session?.date);
-  return day ? `${name} · ${day}` : name;
+  return session?.label || (number != null ? `Session ${number}` : "Session");
+}
+
+/** Pill text is the day and month only, such as "6 Nov". */
+export function sessionTabLabel(session) {
+  return formatSessionDay(session?.date) || sessionName(session);
+}
+
+/** Accessible name for a session pill, such as "Session 1, 6 Nov 2026". */
+export function sessionTabAriaLabel(session) {
+  const name = sessionName(session);
+  const date = formatSessionDate(session?.date);
+  return date ? `${name}, ${date}` : name;
 }
 
 export function sessionHash(session) {
@@ -132,6 +142,7 @@ export function sessionPage(sessions, requested) {
     tabs: list.map((item, itemIndex) => ({
       id: item.id,
       label: sessionTabLabel(item),
+      ariaLabel: sessionTabAriaLabel(item),
       selected: itemIndex === index,
       hash: sessionHash(item),
     })),

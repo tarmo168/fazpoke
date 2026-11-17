@@ -7,6 +7,7 @@ import {
   sessionHeading,
   sessionPage,
   sessionRowTag,
+  sessionTabAriaLabel,
   sessionTabLabel,
 } from "../js/sessions.js";
 
@@ -22,9 +23,9 @@ test("session 2 is the latest night and is headed 13 Nov 2026", () => {
   assert.equal(page.heading, "Session 2 · 13 Nov 2026");
   assert.equal(page.showTabs, true);
   assert.equal(page.session.totalEarnings, 5220);
-  assert.deepEqual(page.tabs.map((tab) => [tab.label, tab.selected, tab.hash]), [
-    ["S1 · 6 Nov", false, "#/sessions/1"],
-    ["S2 · 13 Nov", true, "#/sessions/2"],
+  assert.deepEqual(page.tabs.map((tab) => [tab.label, tab.ariaLabel, tab.selected, tab.hash]), [
+    ["6 Nov", "Session 1, 6 Nov 2026", false, "#/sessions/1"],
+    ["13 Nov", "Session 2, 13 Nov 2026", true, "#/sessions/2"],
   ]);
   const first = sessionPage(model.sessions, "1");
   assert.equal(first.heading, "Session 1 · 6 Nov 2026");
@@ -44,6 +45,16 @@ test("session 2 is the latest night and is headed 13 Nov 2026", () => {
   assert.equal(sheet.includes("sessionRowTag"), true);
   assert.equal(sheet.includes("dealer-tag"), true);
   assert.equal(style.includes(".dealer-tag"), true);
+  assert.equal(sheet.includes('["Buy-in", formatAmount(model.totals.buyIn)'), false);
+  assert.equal(sheet.includes("formatAmount(session.buyIn)"), false);
+  assert.equal(sheet.includes("Recorded total"), false);
+  assert.equal(sheet.includes('text: "Buy-in"'), true);
+  assert.equal(sheet.includes("formatAmount(row.buyIn)"), true);
+  assert.equal(sheet.includes('text: "Total earnings"'), true);
+  assert.equal(sheet.includes("formatAmount(session.totalEarnings)"), true);
+  assert.equal(sheet.includes('"aria-label": tab.ariaLabel'), true);
+  assert.equal(style.includes("grid-template-columns: repeat(4, 1fr)"), false);
+  assert.equal(style.includes("grid-template-columns: repeat(3, 1fr)"), true);
 });
 
 test("the latest of two sessions is selected by default", () => {
@@ -84,9 +95,9 @@ test("the latest of two sessions is selected by default", () => {
   ]);
   assert.equal(page.showTabs, true);
   assert.equal(page.heading, "Session 2 · 13 Nov 2026");
-  assert.deepEqual(page.tabs.map((tab) => [tab.label, tab.selected, tab.hash]), [
-    ["S1 · 6 Nov", false, "#/sessions/1"],
-    ["S2 · 13 Nov", true, "#/sessions/2"],
+  assert.deepEqual(page.tabs.map((tab) => [tab.label, tab.ariaLabel, tab.selected, tab.hash]), [
+    ["6 Nov", "Session 1, 6 Nov 2026", false, "#/sessions/1"],
+    ["13 Nov", "Session 2, 13 Nov 2026", true, "#/sessions/2"],
   ]);
 
   const earlier = sessionPage(model.sessions, "1");
@@ -112,7 +123,10 @@ test("the highest number wins, then the most recent date", () => {
   ];
   const dated = sessionPage(byDate, "");
   assert.equal(dated.session.id, "night-a");
-  assert.equal(sessionTabLabel(byDate[0]), "Friday · 20 Nov");
+  assert.equal(sessionTabLabel(byDate[0]), "20 Nov");
+  assert.equal(sessionTabAriaLabel(byDate[0]), "Friday, 20 Nov 2026");
+  assert.equal(sessionTabLabel({ id: "session-1", label: "Session 1" }), "Session 1");
+  assert.equal(sessionTabAriaLabel({ id: "session-1", label: "Session 1" }), "Session 1");
 
   const undated = [
     { id: "session-1", label: "Session 1" },
