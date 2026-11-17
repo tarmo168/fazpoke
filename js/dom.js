@@ -26,6 +26,16 @@ export function el(tag, attrs = {}, children = []) {
   return node;
 }
 
+/** Round dealer button. Hover text and the accessible name are "Dealer". */
+export function dealerButton() {
+  return el("span", {
+    class: "dealer-button",
+    title: "Dealer",
+    "aria-label": "Dealer",
+    text: "D",
+  });
+}
+
 export function avatar(person, className = "") {
   const classes = ["avatar", className].filter(Boolean).join(" ");
   if (!person?.photo) {
