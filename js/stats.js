@@ -325,24 +325,19 @@ export function cumulativeNets(player) {
 }
 
 /**
- * Sign of the most recent recorded nets.
- * Positive is a hot streak, negative is a cold streak.
- * A break-even (0) ends the run. Fewer than 2 sessions is no streak.
+ * Length of the most recent run of positive recorded nets.
+ * A negative result or a break-even (0) ends the run.
+ * Fewer than 2 sessions is no streak.
  */
 export function streak(nets) {
   const values = (Array.isArray(nets) ? nets : []).filter(isRecordedNet);
-  let type = null;
   let length = 0;
   for (let index = values.length - 1; index >= 0; index -= 1) {
-    const value = values[index];
-    if (value === 0) break;
-    const sign = value > 0 ? "hot" : "cold";
-    if (type == null) type = sign;
-    if (sign !== type) break;
+    if (values[index] <= 0) break;
     length += 1;
   }
-  if (type == null || length < 2) return { type: null, length: 0 };
-  return { type, length };
+  if (length < 2) return { type: null, length: 0 };
+  return { type: "hot", length };
 }
 
 /** Population standard deviation. Describes the recorded nets themselves. */
@@ -411,19 +406,18 @@ const BADGES = {
   },
 };
 
-function streakBadge(type, length) {
-  const word = type === "hot" ? "Positive" : "Negative";
+function streakBadge(length) {
   return {
-    id: type,
-    mark: type === "hot" ? "🔥" : "🧊",
-    label: type === "hot" ? "Hot streak" : "Cold streak",
-    title: `${word} net in ${length} consecutive most-recent recorded sessions.`,
+    id: "hot",
+    mark: "🔥",
+    label: "Hot streak",
+    title: `Positive net in ${length} consecutive most-recent recorded sessions.`,
   };
 }
 
 /**
  * Up to two badges per player, in this order:
- * chip leader, fish, hot streak, cold streak, most consistent, biggest win.
+ * chip leader, fish, hot streak, most consistent, biggest win.
  * Ties go to every player who shares the mark. Fish is the lowest total
  * earnings among players with a recorded result, including dealer earnings
  * from a player with 0 sessions played. Place and Fish use that total,
@@ -466,7 +460,7 @@ export function awardBadges(players) {
     const picked = [];
     if (leaders.has(row.id)) picked.push({ ...BADGES.chip });
     if (fish.has(row.id)) picked.push({ ...BADGES.fish });
-    if (run.type === "hot" || run.type === "cold") picked.push(streakBadge(run.type, run.length));
+    if (run.type === "hot") picked.push(streakBadge(run.length));
     if (consistent.has(row.id)) picked.push({ ...BADGES.consistent });
     if (winners.has(row.id)) picked.push({ ...BADGES.win });
     awarded.set(row.id, picked.slice(0, BADGE_LIMIT));
