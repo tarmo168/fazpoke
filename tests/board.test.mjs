@@ -275,15 +275,15 @@ test("a longer jump reports every place gained", () => {
   assert.deepEqual(moves.get("c"), { change: "down", places: 1 });
 });
 
-test("streaks follow the most recent recorded nets and stop on zero or a flip", () => {
+test("hot streaks follow the most recent positive nets and stop on zero or a loss", () => {
   const cases = [
     [[10, 20], { type: "hot", length: 2 }],
     [[10, 20, 5], { type: "hot", length: 3 }],
     [[10, -1, 5, 5], { type: "hot", length: 2 }],
     [[-5, 10, 10], { type: "hot", length: 2 }],
-    [[-5, -1], { type: "cold", length: 2 }],
-    [[-5, -1, -3], { type: "cold", length: 3 }],
-    [[5, 5, -1, -2], { type: "cold", length: 2 }],
+    [[-5, -1], { type: null, length: 0 }],
+    [[-5, -1, -3], { type: null, length: 0 }],
+    [[5, 5, -1, -2], { type: null, length: 0 }],
     [[10, 20, -1], { type: null, length: 0 }],
     [[10, 0, 20], { type: null, length: 0 }],
     [[5, 0], { type: null, length: 0 }],
@@ -364,13 +364,11 @@ test("badges award ties, cap at two, and hide consistency when nobody qualifies"
   assert.deepEqual(ids(live, "tae"), ["chip"]);
   assert.deepEqual(ids(live, "zack"), ["win"]);
   assert.deepEqual(ids(live, "wilson"), ["fish"]);
-  assert.deepEqual(ids(live, "fah"), ["cold"]);
-  assert.deepEqual(ids(live, "bank"), ["cold"]);
   const fish = live.get("wilson")[0];
   assert.equal(fish.mark, "🐟");
   assert.equal(fish.label, "Fish");
   assert.equal(fish.title, "Lowest total earnings.");
-  for (const id of ["dom", "will", "taam", "guy", "him", "james", "tip", "golf", "eye"]) {
+  for (const id of ["dom", "will", "taam", "guy", "him", "james", "tip", "golf", "eye", "fah", "bank"]) {
     assert.deepEqual(ids(live, id), []);
   }
   for (const player of model.unrecorded) assert.equal(live.has(player.id), false);
@@ -382,10 +380,22 @@ test("badges award ties, cap at two, and hide consistency when nobody qualifies"
     { id: "cee", name: "Cee", net: 3, nets: [1, 1, 1] },
   ]);
   assert.deepEqual(ids(capped, "ace"), ["chip", "hot"]);
-  assert.deepEqual(ids(capped, "bee"), ["fish", "cold"]);
+  assert.deepEqual(ids(capped, "bee"), ["fish", "win"]);
   assert.deepEqual(ids(capped, "cee"), ["hot", "consistent"]);
+  const hot = capped.get("ace")[1];
+  assert.equal(hot.mark, "🔥");
+  assert.equal(hot.label, "Hot streak");
+  assert.equal(hot.title, "Positive net in 3 consecutive most-recent recorded sessions.");
   assert.equal(capped.get("ace").length <= 2, true);
   assert.equal(capped.get("bee").length <= 2, true);
+  for (const list of [...live.values(), ...capped.values()]) {
+    assert.equal(list.some((badge) => badge.id === "cold" || badge.label === "Cold streak"), false);
+  }
+  const style = readFileSync(new URL("../css/styles.css", import.meta.url), "utf8");
+  const stats = readFileSync(new URL("../js/stats.js", import.meta.url), "utf8");
+  assert.equal(style.includes(".badge-cold"), false);
+  assert.equal(style.includes(".badge-hot"), true);
+  assert.equal(/cold streak/i.test(stats), false);
 
   const tied = awardBadges([
     { id: "ann", name: "Ann", net: 10, nets: [10] },
