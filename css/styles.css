@@ -251,6 +251,10 @@ img { display: block; max-width: 100%; }
 .summary > div:nth-child(odd) { box-shadow: inset -1px 0 0 var(--line); }
 .summary > div:nth-child(-n+2) { box-shadow: inset 0 -1px 0 var(--line); }
 .summary > div:nth-child(1) { box-shadow: inset -1px -1px 0 var(--line); }
+.summary > div:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+  box-shadow: none;
+}
 
 .summary .label {
   display: block;
@@ -979,12 +983,16 @@ tfoot th, tfoot td {
 
 @media (min-width: 720px) {
   .shell { width: min(1120px, calc(100% - 56px)); }
-  .summary { grid-template-columns: repeat(4, 1fr); }
+  .summary { grid-template-columns: repeat(3, 1fr); }
   .summary > div,
   .summary > div:nth-child(odd),
   .summary > div:nth-child(-n+2),
   .summary > div:nth-child(1) { box-shadow: inset -1px 0 0 var(--line); }
-  .summary > div:last-child { box-shadow: none; }
+  .summary > div:last-child,
+  .summary > div:last-child:nth-child(odd) {
+    grid-column: auto;
+    box-shadow: none;
+  }
 
   .standings {
     --board-columns: 3rem 48px minmax(0, 1fr) 4.4rem auto;

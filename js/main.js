@@ -221,7 +221,6 @@ function summary(model) {
   const cells = [
     ["Sessions", String(model.totals.sessions), ""],
     ["Recorded", String(model.totals.recordedPlayers), ""],
-    ["Buy-in", formatAmount(model.totals.buyIn), ""],
     ["Total earnings", formatAmount(model.totals.totalEarnings), ""],
   ];
   return el("div", { class: "ledger-totals" }, [
@@ -436,6 +435,7 @@ function ledger(model) {
       role: "tab",
       "aria-selected": tab.selected ? "true" : "false",
       "aria-controls": "session-sheet",
+      "aria-label": tab.ariaLabel,
       onclick: () => openSession(tab.hash),
     }, tab.label))));
   }
@@ -475,11 +475,6 @@ function ledger(model) {
       ]);
     })),
     el("tfoot", {}, [
-      el("tr", {}, [
-        el("th", { scope: "row", text: "Recorded total" }),
-        el("td", { class: "num", text: formatAmount(session.buyIn) }),
-        el("td"),
-      ]),
       el("tr", {}, [
         el("th", { scope: "row", text: "Total earnings" }),
         el("td"),
