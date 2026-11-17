@@ -35,7 +35,7 @@ globalThis.document = {
   },
 };
 
-const { avatar } = await import("../js/dom.js");
+const { avatar, dealerButton } = await import("../js/dom.js");
 
 test("a player with no photo gets a circle of their initial", () => {
   for (const person of [
@@ -75,4 +75,16 @@ test("a missing name falls back to a question mark", () => {
   const node = avatar({});
   assert.equal(node.tagName, "SPAN");
   assert.equal(node.textContent, "?");
+});
+
+test("the dealer marker is a round D chip with a Dealer tooltip", () => {
+  const node = dealerButton();
+  assert.equal(node.tagName, "SPAN");
+  assert.equal(node.className, "dealer-button");
+  assert.equal(node.textContent, "D");
+  assert.equal(node.attributes.get("title"), "Dealer");
+  assert.equal(node.attributes.get("aria-label"), "Dealer");
+  const label = `${node.textContent} ${node.attributes.get("title")} ${node.attributes.get("aria-label")}`;
+  assert.equal(/[$€£¥฿₱₩₽₹]/.test(label), false);
+  assert.equal(/baht|dollar/i.test(label), false);
 });

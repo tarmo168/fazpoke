@@ -406,6 +406,18 @@ h3 { font-size: 1.2rem; margin-top: 18px; }
   white-space: nowrap;
 }
 
+.name-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.name-line .name {
+  min-width: 0;
+}
+
 .standings .col-sessions,
 .standings .col-net { text-align: right; }
 
@@ -820,6 +832,42 @@ td.num, tfoot .num { font-weight: 650; }
   white-space: nowrap;
 }
 
+.dealer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: 50%;
+  border: 1.5px solid #1c1508;
+  background: #f6f3ec;
+  box-shadow: 0 0 0 1.5px var(--brass);
+  color: #1c1508;
+  font-family: Outfit, "Avenir Next", "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.hero .dealer-button {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-width: 2px;
+  box-shadow: 0 0 0 2px var(--brass);
+  font-size: 0.84rem;
+}
+
+.hero h1.name-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
 tfoot th, tfoot td {
   border-top: 1px solid var(--line);
   font-weight: 650;
@@ -1006,7 +1054,8 @@ tfoot th, tfoot td {
     gap: 4px 8px;
   }
 
-  .standings .name { flex: 0 1 auto; }
+  .standings .name,
+  .standings .name-line { flex: 0 1 auto; }
 
   .standings .avatar { --avatar-size: 48px; width: 48px; height: 48px; }
   .spark { width: 64px; height: 20px; }

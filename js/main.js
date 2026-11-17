@@ -1,4 +1,4 @@
-import { avatar, el } from "./dom.js";
+import { avatar, dealerButton, el } from "./dom.js";
 import { formatAmount, formatSigned, signedClass } from "./format.js";
 import {
   awardBadges,
@@ -6,6 +6,7 @@ import {
   buildModel,
   cumulativeNets,
   findPlayer,
+  hasDealt,
   leaderboardOrder,
   rankMoves,
   sortStandings,
@@ -181,6 +182,13 @@ function badgeNodes(list) {
   ])));
 }
 
+/** Name, with a dealer button beside it when this player has dealt. */
+function nameLine(player) {
+  const name = el("span", { class: "name", text: player.name });
+  if (!hasDealt(player)) return name;
+  return el("span", { class: "name-line" }, [name, dealerButton()]);
+}
+
 function scrollToSection(section) {
   const target = document.getElementById(section || "board");
   if (!target) return;
@@ -256,19 +264,20 @@ function board(model, enter) {
   const rows = ordered.map((player, index) => {
     const text = boardRowText(player);
     const delay = motion ? { "--row-delay": `${index * ROW_STAGGER_MS}ms` } : undefined;
+    const dealerPhrase = hasDealt(player) ? "Dealer" : "";
     if (!text.ranked) {
       return el("a", {
         class: `row${motion ? " row-in" : ""}`,
         href: `#/player/${player.id}`,
         style: delay,
-        "aria-label": `${player.name}. No rank. 0 sessions. No recorded total.`,
+        "aria-label": [player.name, dealerPhrase, "No rank", "0 sessions", "No recorded total"].filter(Boolean).join(". ") + ".",
       }, [
         el("span", { class: "rank" }, [
           el("span", { class: "rank-num num rank-blank", text: text.rank }),
         ]),
         avatar(player),
         el("span", { class: "who" }, [
-          el("span", { class: "name", text: player.name }),
+          nameLine(player),
         ]),
         el("span", { class: "col-sessions num", text: text.sessions }),
         el("span", { class: "col-net" }, [
@@ -283,6 +292,7 @@ function board(model, enter) {
     const badgePhrase = playerBadges.map((badge) => badge.label).join(", ");
     const label = [
       `${place}. ${player.name}`,
+      dealerPhrase,
       move?.phrase,
       badgePhrase,
       sessionsLabel(player.sessionsPlayed),
@@ -300,7 +310,7 @@ function board(model, enter) {
       ]),
       avatar(player),
       el("span", { class: "who" }, [
-        el("span", { class: "name", text: player.name }),
+        nameLine(player),
         badgeNodes(playerBadges),
       ]),
       el("span", { class: "col-sessions num", text: text.sessions }),
@@ -513,7 +523,12 @@ function profile(model, colors) {
     avatar(player, player.recorded ? "hero-photo" : "hero-photo dim"),
     el("div", {}, [
       el("p", { class: "section-kicker", text: "Player" }),
-      el("h1", { text: player.name }),
+      hasDealt(player)
+        ? el("h1", { class: "name-line" }, [
+          el("span", { text: player.name }),
+          dealerButton(),
+        ])
+        : el("h1", { text: player.name }),
       el("p", { class: `hero-net ${heroTone}`, text: heroValue }),
       el("p", {
         class: "note",

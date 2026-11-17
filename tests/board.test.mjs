@@ -7,6 +7,7 @@ import {
   boardRowText,
   buildModel,
   cumulativeNets,
+  hasDealt,
   leaderboardOrder,
   mostConsistent,
   rankMoves,
@@ -519,4 +520,109 @@ test("fish and rank use total earnings when a dealer has no sessions played", ()
   const bySessions = leaderboardOrder(byAverage.standings, byAverage.unrecorded, "sessionsPlayed", "asc");
   assert.equal(bySessions[0].id, "host");
   assert.equal(bySessions.at(-1).recorded, true);
+});
+
+test("a dealer button marks anyone who dealt, including 0 sessions played", () => {
+  const model = buildModel(players, sessions);
+  const guy = model.standings.find((player) => player.id === "guy");
+  assert.equal(guy.sessionsPlayed, 0);
+  assert.equal(guy.recorded, true);
+  assert.equal(hasDealt(guy), true);
+  assert.equal(boardRowText(guy).ranked, true);
+  assert.equal(boardRowText(guy).sessions, "0");
+  for (const player of [...model.standings, ...model.unrecorded]) {
+    if (player.id === "guy") continue;
+    assert.equal(hasDealt(player), false);
+  }
+
+  const live = awardBadges(model.standings);
+  assert.deepEqual(ids(live, "guy"), []);
+  assert.equal(live.get("guy").some((badge) => /dealer/i.test(`${badge.id} ${badge.label}`)), false);
+
+  const dealtAndCapped = {
+    id: "ace",
+    name: "Ace",
+    net: 30,
+    nets: [10, 10, 10],
+    history: [{ dealer: true, recorded: true, net: 10 }],
+  };
+  const capped = awardBadges([
+    dealtAndCapped,
+    { id: "bee", name: "Bee", net: -20, nets: [50, -40, -30] },
+    { id: "cee", name: "Cee", net: 3, nets: [1, 1, 1] },
+  ]);
+  assert.deepEqual(ids(capped, "ace"), ["chip", "hot"]);
+  assert.equal(capped.get("ace").length, 2);
+  assert.equal(capped.get("ace").some((badge) => /dealer/i.test(`${badge.id} ${badge.label}`)), false);
+  assert.equal(hasDealt(dealtAndCapped), true);
+
+  const playedAndDealt = buildModel(
+    [{ id: "pat", name: "Pat" }],
+    [
+      { id: "s1", label: "Session 1", entries: [{ playerId: "pat", buyIn: 10, net: 10 }] },
+      { id: "s2", label: "Session 2", entries: [{ playerId: "pat", buyIn: 0, net: 4, dealer: true }] },
+    ],
+  );
+  assert.equal(playedAndDealt.standings[0].sessionsPlayed, 1);
+  assert.equal(hasDealt(playedAndDealt.standings[0]), true);
+
+  const unrecordedDealer = buildModel(
+    [
+      { id: "host", name: "Host" },
+      { id: "ace", name: "Ace" },
+    ],
+    [{
+      id: "s1",
+      label: "Session 1",
+      entries: [
+        { playerId: "host", buyIn: 0, net: null, dealer: true },
+        { playerId: "ace", buyIn: 10, net: 5 },
+      ],
+    }],
+  );
+  const host = unrecordedDealer.unrecorded.find((player) => player.id === "host");
+  assert.equal(host.recorded, false);
+  assert.equal(host.sessionsPlayed, 0);
+  assert.equal(hasDealt(host), true);
+  assert.equal(hasDealt(unrecordedDealer.standings[0]), false);
+  assert.equal(boardRowText(host).ranked, false);
+  assert.equal(boardRowText(host).sessions, "0");
+
+  const worded = buildModel(
+    [{ id: "pat", name: "Pat" }],
+    [{ id: "s1", label: "Session 1", entries: [{ playerId: "pat", buyIn: 0, net: 4, dealer: "true" }] }],
+  );
+  assert.equal(hasDealt(worded.standings[0]), false);
+  assert.equal(hasDealt(null), false);
+  assert.equal(hasDealt({}), false);
+  assert.equal(hasDealt({ history: [{ dealer: false }, { dealer: 1 }] }), false);
+  assert.equal(hasDealt({ sessionsPlayed: 0 }), false);
+
+  const sheet = readFileSync(new URL("../js/main.js", import.meta.url), "utf8");
+  const style = readFileSync(new URL("../css/styles.css", import.meta.url), "utf8");
+  const stats = readFileSync(new URL("../js/stats.js", import.meta.url), "utf8");
+  const nameLineStart = sheet.indexOf("function nameLine");
+  const nameLineEnd = sheet.indexOf("function scrollToSection");
+  assert.ok(nameLineStart > 0 && nameLineEnd > nameLineStart);
+  const nameLine = sheet.slice(nameLineStart, nameLineEnd);
+  assert.match(nameLine, /hasDealt\(player\)/);
+  assert.match(nameLine, /dealerButton\(\)/);
+  assert.match(nameLine, /name-line/);
+  assert.equal(nameLine.includes("sessionsPlayed"), false);
+  assert.equal(nameLine.includes("awardBadges"), false);
+  assert.equal(nameLine.includes("badgeNodes"), false);
+  assert.equal((sheet.match(/nameLine\(player\)/g) || []).length, 3);
+  assert.match(sheet, /el\("h1", \{ class: "name-line" \}/);
+  assert.equal((sheet.match(/dealerButton\(\)/g) || []).length, 2);
+  const badgeNodes = sheet.slice(sheet.indexOf("function badgeNodes"), nameLineStart);
+  assert.equal(badgeNodes.includes("dealerButton"), false);
+  assert.equal(badgeNodes.includes("hasDealt"), false);
+  const badgeBlock = stats.slice(stats.indexOf("const BADGES"), stats.indexOf("function streakBadge"));
+  assert.equal(/dealer/i.test(badgeBlock), false);
+  assert.match(stats, /picked\.slice\(0,\s*BADGE_LIMIT\)/);
+  const rule = style.match(/\.dealer-button\s*\{[^}]+\}/);
+  assert.ok(rule);
+  assert.match(rule[0], /border-radius:\s*50%/);
+  assert.match(rule[0], /display:\s*inline-flex/);
+  assert.equal(/[$€£¥฿₱₩₽₹]/.test(`${rule[0]}${nameLine}${badgeBlock}`), false);
 });

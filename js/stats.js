@@ -13,6 +13,11 @@
  * of 0. Rank and the Fish badge use that total, never earnings divided
  * by sessions played.
  *
+ * `hasDealt` is true when any of that player's entries has `dealer: true`.
+ * The leaderboard and player page use it for a dealer button beside the
+ * name. That button is not one of the two award badges, and a session
+ * count of 0 does not hide it.
+ *
  * Total earnings for a session is the sum of its positive recorded nets,
  * the amount that changed hands. The all-sessions figure adds those up.
  * Break-even and unrecorded results add nothing.
@@ -367,6 +372,16 @@ export function mostConsistent(players, minimum = 3) {
   return eligible.filter((item) => sameSpread(item.spread, best)).map((item) => item.id);
 }
 
+/**
+ * True when the player has at least one dealer entry.
+ * Played sessions are irrelevant: a dealer net with 0 sessions played
+ * still counts, and so does an unrecorded dealer entry.
+ */
+export function hasDealt(player) {
+  const history = Array.isArray(player?.history) ? player.history : [];
+  return history.some((item) => item?.dealer === true);
+}
+
 const BADGE_LIMIT = 2;
 
 const BADGES = {
@@ -413,7 +428,7 @@ function streakBadge(type, length) {
  * earnings among players with a recorded result, including dealer earnings
  * from a player with 0 sessions played. Place and Fish use that total,
  * not an average per session. Consistency is omitted when nobody has
- * 3 recorded results.
+ * 3 recorded results. The dealer button is not awarded here.
  */
 export function awardBadges(players) {
   const rows = [];
