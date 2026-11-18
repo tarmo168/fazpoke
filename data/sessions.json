@@ -33,5 +33,21 @@
       { "playerId": "wilson", "buyIn": 1400, "net": -1400 },
       { "playerId": "guy", "buyIn": 0, "net": 405, "dealer": true }
     ]
+  },
+  {
+    "id": "session-3",
+    "label": "Session 3",
+    "date": "2026-11-18",
+    "entries": [
+      { "playerId": "fah", "buyIn": 200, "net": 2725 },
+      { "playerId": "eye", "buyIn": 200, "net": 450 },
+      { "playerId": "na", "buyIn": 500, "net": 0 },
+      { "playerId": "taam", "buyIn": 1500, "net": -245 },
+      { "playerId": "guy", "buyIn": 400, "net": -400 },
+      { "playerId": "dom", "buyIn": 1000, "net": -555 },
+      { "playerId": "zack", "buyIn": 800, "net": -800 },
+      { "playerId": "tip", "buyIn": 1500, "net": -1450 },
+      { "playerId": "kristian", "buyIn": 0, "net": 275, "dealer": true }
+    ]
   }
 ]

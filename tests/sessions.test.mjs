@@ -14,29 +14,37 @@ import {
 const players = JSON.parse(readFileSync(new URL("../data/players.json", import.meta.url), "utf8"));
 const sessions = JSON.parse(readFileSync(new URL("../data/sessions.json", import.meta.url), "utf8"));
 
-test("session 2 is the latest night and is headed 13 Nov 2026", () => {
+test("session 3 is the latest night and is headed 18 Nov 2026", () => {
   assert.equal(sessions[0].date, "2026-11-06");
   assert.equal(sessions[1].date, "2026-11-13");
+  assert.equal(sessions[2].date, "2026-11-18");
   const model = buildModel(players, sessions);
   const page = sessionPage(model.sessions, "");
-  assert.equal(page.session.id, "session-2");
-  assert.equal(page.heading, "Session 2 · 13 Nov 2026");
+  assert.equal(page.session.id, "session-3");
+  assert.equal(page.heading, "Session 3 · 18 Nov 2026");
   assert.equal(page.showTabs, true);
-  assert.equal(page.session.totalEarnings, 5220);
+  assert.equal(page.session.totalEarnings, 3450);
   assert.deepEqual(page.tabs.map((tab) => [tab.label, tab.ariaLabel, tab.selected, tab.hash]), [
     ["6 Nov", "Session 1, 6 Nov 2026", false, "#/sessions/1"],
-    ["13 Nov", "Session 2, 13 Nov 2026", true, "#/sessions/2"],
+    ["13 Nov", "Session 2, 13 Nov 2026", false, "#/sessions/2"],
+    ["18 Nov", "Session 3, 18 Nov 2026", true, "#/sessions/3"],
   ]);
   const first = sessionPage(model.sessions, "1");
   assert.equal(first.heading, "Session 1 · 6 Nov 2026");
   assert.equal(first.session.totalEarnings, 1790);
+  const second = sessionPage(model.sessions, "2");
+  assert.equal(second.heading, "Session 2 · 13 Nov 2026");
+  assert.equal(second.session.totalEarnings, 5220);
   assert.equal(model.byId.get("dom").history[0].date, "2026-11-06");
   assert.equal(sessionHeading(model.byId.get("dom").history[0]), "Session 1 · 6 Nov 2026");
   assert.equal(sessionHeading(model.byId.get("guy").history[0]), "Session 2 · 13 Nov 2026");
 
-  const guy = page.session.rows.find((row) => row.playerId === "guy");
+  const guy = second.session.rows.find((row) => row.playerId === "guy");
   assert.equal(sessionRowTag(guy), "Dealer");
-  assert.equal(sessionRowTag(page.session.rows.find((row) => row.playerId === "zack")), "");
+  const kristian = page.session.rows.find((row) => row.playerId === "kristian");
+  assert.equal(sessionRowTag(kristian), "Dealer");
+  assert.equal(sessionRowTag(page.session.rows.find((row) => row.playerId === "fah")), "");
+  assert.equal(sessionRowTag(page.session.rows.find((row) => row.playerId === "guy")), "");
   assert.equal(sessionRowTag({ dealer: false }), "");
   assert.equal(sessionRowTag({}), "");
   assert.equal(sessionRowTag(null), "");
