@@ -82,5 +82,10 @@
   {
     "id": "tae",
     "name": "Tae"
+  },
+  {
+    "id": "kristian",
+    "name": "Kristian",
+    "photo": "assets/players/kristian.png"
   }
 ]
