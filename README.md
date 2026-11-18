@@ -36,9 +36,9 @@ Figures are plain numbers. Positive results use a leading `+`. Negative results 
 
 `null` means the result was not written down. That entry stays in the ledger as unrecorded. It is left out of rankings, buy-in totals, net totals, and charts. It is not stored or counted as zero.
 
-Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na has no session entry at all. Chase, JJ, Dom, Na, and Tip sat out Session 2, so that night's entries leave them out. Players with no recorded result appear at the bottom of the leaderboard and stay off the charts.
+Taam in Session 1 is the recorded break-even (`0`). Chase and JJ are on Session 1 with a buy-in of `0` and an unrecorded result (`null`). Na's first recorded result is a break-even (`0`) in Session 3. Chase, JJ, Dom, Na, and Tip sat out Session 2, so that night's entries leave them out. Will, Bank, Chase, JJ, Golf, James, Wilson, Him, and Tae sat out Session 3. Chase and JJ still have no recorded result. Players with no recorded result appear at the bottom of the leaderboard and stay off the charts.
 
-Guy dealt Session 2. His entry is `{ "playerId": "guy", "buyIn": 0, "net": 405, "dealer": true }`. The `405` counts toward his total earnings, his leaderboard place, his sparkline, the session balance, and that session's total earnings. It does not count as a session played, so his session count stays `0`. He is ranked with the other results. Fish is the lowest total earnings, including someone whose only result is a dealer net. Rank never divides earnings by sessions played.
+Guy dealt Session 2. His entry is `{ "playerId": "guy", "buyIn": 0, "net": 405, "dealer": true }`. The `405` counts toward his total earnings, his leaderboard place, his sparkline, the session balance, and that session's total earnings. It does not count as a session played. He played Session 3, so that night counts and the dealer night does not. Kristian dealt Session 3. His entry is `{ "playerId": "kristian", "buyIn": 0, "net": 275, "dealer": true }`. That `275` counts the same way, and because he has no played seat his session count stays `0`. Both are ranked with the other results. Fish is the lowest total earnings, including someone whose only result is a dealer net. Rank never divides earnings by sessions played.
 
 The chart draws a zero point labeled Start, before the first session in the file. That point is the baseline of a cumulative line, not an extra session. A later session with no recorded result keeps the previous cumulative total and is drawn as a hollow point.
 
@@ -61,8 +61,8 @@ Append one object to the array in `data/sessions.json`.
 
 ```json
 {
-  "id": "session-3",
-  "label": "Session 3",
+  "id": "session-4",
+  "label": "Session 4",
   "date": "2026-11-20",
   "entries": [
     { "playerId": "taam", "buyIn": 0, "net": null }
@@ -78,7 +78,7 @@ Check the sheet before pushing:
 node --test tests/ledger.test.mjs tests/sessions.test.mjs tests/liveboard.test.mjs tests/sheets.test.mjs tests/board.test.mjs tests/share.test.mjs tests/avatar.test.mjs
 ```
 
-Recorded nets on a finished session should add up to `0`, including a dealer net. Session 1 is buy-in `3,700` and net `0`. Session 2 is buy-in `8,500` and net `0`, with Guy's dealer net of `405` inside that sum.
+Recorded nets on a finished session should add up to `0`, including a dealer net. Session 1 is buy-in `3,700` and net `0`. Session 2 is buy-in `8,500` and net `0`, with Guy's dealer net of `405` inside that sum. Session 3 is buy-in `6,100` and net `0`, with Kristian's dealer net of `275` inside that sum.
 
 ## Live leaderboard
 
